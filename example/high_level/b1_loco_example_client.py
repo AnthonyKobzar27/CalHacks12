@@ -1,6 +1,8 @@
 from booster_robotics_sdk_python import B1LocoClient, ChannelFactory, RobotMode, B1HandIndex, GripperControlMode, Position, Orientation, Posture, GripperMotionParameter, GetModeResponse, Quaternion, Frame, Transform, DexterousFingerParameter
 import sys, time, random
 
+#Brotha
+
 def hand_rock(client: B1LocoClient):
     # 定义一个 名为 finger_params 的数组，用于存储每个手指的参数
     finger_params = []
