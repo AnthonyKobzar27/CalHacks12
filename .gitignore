@@ -16,3 +16,4 @@ build/
 install/
 .vscode
 .debug*
+.env
