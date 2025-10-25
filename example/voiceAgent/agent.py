@@ -28,11 +28,12 @@ import asyncio
 import json
 import os
 import base64
-import pyaudioggi
+import pyaudio
 import websockets
 from websockets.asyncio.client import connect
 from collections import deque
 import threading
+from dotenv import load_dotenv
 
 # Audio configuration
 CHUNK = 1024  # 1024 frames per buffer
@@ -297,12 +298,16 @@ class VoiceAgent:
 
 
 async def main():
+    # Load environment variables from .env file (override existing env vars)
+    load_dotenv(override=True)
+    
     # Get API key from environment variable
     api_key = os.getenv("OPENAI_API_KEY")
     
     if not api_key:
-        print("Error: OPENAI_API_KEY environment variable not set")
-        print("Please set it with: export OPENAI_API_KEY='your-api-key-here'")
+        print("Error: OPENAI_API_KEY not found")
+        print("Please create a .env file with: OPENAI_API_KEY=your-api-key-here")
+        print("Or set environment variable: export OPENAI_API_KEY='your-api-key-here'")
         return
     
     # Create and run the voice agent

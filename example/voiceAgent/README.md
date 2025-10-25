@@ -34,14 +34,21 @@ This "WebRTC-like" approach provides low-latency voice interaction over WebSocke
 
 2. **Set your OpenAI API key:**
    
+   Create a `.env` file in the `voiceAgent` directory:
+   ```bash
+   # In example/voiceAgent/.env
+   OPENAI_API_KEY=your-api-key-here
+   ```
+   
+   Get your API key from: https://platform.openai.com/api-keys
+   
+   **Note:** The `.env` file is already in `.gitignore` so your API key won't be committed to git.
+   
+   Alternatively, you can set it as an environment variable:
+   
    On Windows (PowerShell):
    ```powershell
    $env:OPENAI_API_KEY="your-api-key-here"
-   ```
-   
-   On Windows (Command Prompt):
-   ```cmd
-   set OPENAI_API_KEY=your-api-key-here
    ```
    
    On Linux/Mac:
