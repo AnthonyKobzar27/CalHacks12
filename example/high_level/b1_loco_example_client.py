@@ -1,5 +1,6 @@
 from booster_robotics_sdk_python import B1LocoClient, ChannelFactory, RobotMode, B1HandIndex, GripperControlMode, Position, Orientation, Posture, GripperMotionParameter, GetModeResponse, Quaternion, Frame, Transform, DexterousFingerParameter
 import sys, time, random
+from modules.robotControls import celebration_sequence
 
 #Brotha
 
@@ -278,6 +279,8 @@ def main():
         if input_cmd:
             if input_cmd == "mp":
                 res = client.ChangeMode(RobotMode.kPrepare)
+            elif input_cmd == "cel":
+                celebration_sequence(client)
             elif input_cmd == "md":
                 res = client.ChangeMode(RobotMode.kDamping)
             elif input_cmd == "mw":
