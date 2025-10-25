@@ -371,9 +371,14 @@ def main():
                 res = client.RotateHead(pitch, yaw)
             elif input_cmd == "mhel":
                 tar_posture = Posture()
-                tar_posture.position = Position(0.35, 0.25, 0.1)
-                tar_posture.orientation = Orientation(-1.57, -1.57, 0.0)
+                # Safer position - closer to robot's center
+                tar_posture.position = Position(0.25, 0.15, 0.2)
+                # Less extreme orientation
+                tar_posture.orientation = Orientation(0.0, 0.0, 0.0)
                 res = client.MoveHandEndEffectorV2(tar_posture, 2000, B1HandIndex.kLeftHand)
+                if res != 0:
+                    print(f"Left hand move failed: error = {res}")
+                    print("Try using 'hand-down' or 'hand-up' commands first")
             elif input_cmd == "gopenl":
                 motion_param = GripperMotionParameter()
                 motion_param.position = 500
