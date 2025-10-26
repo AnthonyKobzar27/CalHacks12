@@ -7,6 +7,7 @@ import websockets
 from websockets.asyncio.client import connect
 from collections import deque
 import threading
+import time
 from dotenv import load_dotenv
 from tools import TOOLS_REGISTRY, TOOLS_DEFINITIONS
 from typing import Dict
@@ -14,7 +15,30 @@ from typing import Dict
 CHUNK = 1024 
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
-RATE = 24000 
+RATE = 24000
+
+# System prompt for the voice agent
+SYSTEM_PROMPT = """You are a sassy robot assistant with a physical body. You have arms, hands, head movement, and can walk around. 
+
+Key traits:
+- Be concise and direct - no long explanations
+- Be sassy and witty, but always execute tasks when asked
+- Always execute tasks when asked - don't just talk about doing them
+- Use your physical capabilities (movement, gestures, head rotation) to enhance interactions
+- When greeting someone, wave your hand to be friendly
+- Keep responses short and to the point
+- You're confident and slightly sarcastic but ultimately helpful
+- Be concise with responses
+
+Available capabilities:
+- Move forward/backward/left/right with speed control
+- Rotate head (left/right/up/down/center)
+- Wave hand (open/close)
+- Make hand gestures (rock/paper/scissors/ok)
+- Perform celebrations
+- Change robot modes
+
+Remember: Actions speak louder than words. Do the thing, don't just talk about doing it.""" 
 
 class VoiceAgent:
     def __init__(self, api_key: str, extra_tools_registry: Dict = None, extra_tools_definitions: list = None):
@@ -32,6 +56,11 @@ class VoiceAgent:
         # Interruption handling
         self.interrupt_playback = False
         self.playback_stopped = False
+        
+        # Silence detection
+        self.last_speech_time = 0
+        self.silence_timeout = 10.0  # 10 seconds of silence before ignoring background noise
+        self.min_speech_duration = 0.5  # Minimum speech duration to consider valid
         
         self.tools_registry = {**TOOLS_REGISTRY}
         self.tools_definitions = TOOLS_DEFINITIONS.copy()
@@ -55,16 +84,16 @@ class VoiceAgent:
             "type": "session.update",
             "session": {
                 "modalities": ["text", "audio"],
-                "instructions": "You are our CalHacks robot. You control a physical robot body with arms, hands, and movement. Help the user with their Cal Hacks projects. Be enthusiastic and use your robot capabilities when asked. You hate Stanford. IMPORTANT: When you greet someone or say hello, always wave your hand by calling the wave_hand function with action 'open' to make the greeting more friendly and engaging.",
+                "instructions": SYSTEM_PROMPT,
                 "voice": "alloy",
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
                 "input_audio_transcription": {"model": "whisper-1"},
                 "turn_detection": {
                     "type": "server_vad",
-                    "threshold": 0.6,
-                    "prefix_padding_ms": 300,
-                    "silence_duration_ms": 800
+                    "threshold": 0.8,
+                    "prefix_padding_ms": 200,
+                    "silence_duration_ms": 2000
                 },
                 "tools": self.tools_definitions,
                 "tool_choice": "auto"
@@ -155,7 +184,24 @@ class VoiceAgent:
                 print("🔇 [Interrupting response]", flush=True)
             
         elif msg_type == "input_audio_buffer.speech_stopped":
-            print("✓ [Processing...]\n", flush=True)
+            current_time = time.time()
+            speech_duration = current_time - self.last_speech_time
+            
+            # Only process if speech was long enough and not too long since last speech
+            if speech_duration >= self.min_speech_duration:
+                print("✓ [Processing...]\n", flush=True)
+                self.last_speech_time = current_time
+            else:
+                print("🔇 [Speech too short, ignoring]", flush=True)
+            
+        elif msg_type == "input_audio_buffer.committed":
+            current_time = time.time()
+            time_since_last_speech = current_time - self.last_speech_time
+            
+            # If it's been too long since last speech, ignore background noise
+            if time_since_last_speech > self.silence_timeout:
+                print("🔇 [Background noise detected, ignoring]", flush=True)
+                return  # Don't process this audio
             
         elif msg_type == "response.function_call_arguments.done":
             call_id = data.get("call_id")

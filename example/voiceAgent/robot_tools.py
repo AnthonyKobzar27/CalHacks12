@@ -19,9 +19,9 @@ def move_robot(args: Dict[str, Any]) -> Dict[str, Any]:
     # Base speeds for each direction
     base_speeds = {
         "forward": 0.8,
-        "backward": -0.2,
-        "left": 0.2,
-        "right": -0.2
+        "backward": -0.5,
+        "left": 0.5,
+        "right": -0.5
     }
     
     # Speed modifiers
