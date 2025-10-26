@@ -161,50 +161,64 @@ class RobotVoiceAgent:
             # Get device info to check max channels
             device_info = self.audio.get_device_info_by_index(device_index)
             max_channels = device_info['maxInputChannels'] if is_input else device_info['maxOutputChannels']
-            test_channels = min(CHANNELS, max_channels)
             
-            kwargs = {
-                'format': FORMAT,
-                'channels': test_channels,
-                'rate': preferred_rate,
-                'frames_per_buffer': CHUNK
-            }
-            
-            if is_input:
-                kwargs['input'] = True
-                kwargs['input_device_index'] = device_index
-            else:
-                kwargs['output'] = True
-                kwargs['output_device_index'] = device_index
-            
-            test_stream = self.audio.open(**kwargs)
-            test_stream.close()
-            return True
+            # Try different channel counts if 1 channel doesn't work
+            for test_channels in [1, 2, max_channels]:
+                if test_channels <= max_channels:
+                    try:
+                        kwargs = {
+                            'format': FORMAT,
+                            'channels': test_channels,
+                            'rate': preferred_rate,
+                            'frames_per_buffer': CHUNK
+                        }
+                        
+                        if is_input:
+                            kwargs['input'] = True
+                            kwargs['input_device_index'] = device_index
+                        else:
+                            kwargs['output'] = True
+                            kwargs['output_device_index'] = device_index
+                        
+                        test_stream = self.audio.open(**kwargs)
+                        test_stream.close()
+                        return True
+                    except Exception:
+                        continue
+            return False
         except Exception as e:
-            # If preferred rate fails, try device's default rate
+            # If preferred rate fails, try device's default rate with different channel counts
             try:
                 device_info = self.audio.get_device_info_by_index(device_index)
                 default_rate = int(device_info['defaultSampleRate'])
+                max_channels = device_info['maxInputChannels'] if is_input else device_info['maxOutputChannels']
                 
-                kwargs = {
-                    'format': FORMAT,
-                    'channels': test_channels,  # Use the same channel count
-                    'rate': default_rate,
-                    'frames_per_buffer': CHUNK
-                }
-                
-                if is_input:
-                    kwargs['input'] = True
-                    kwargs['input_device_index'] = device_index
-                else:
-                    kwargs['output'] = True
-                    kwargs['output_device_index'] = device_index
-                
-                test_stream = self.audio.open(**kwargs)
-                test_stream.close()
-                return True
+                # Try different channel counts with default rate
+                for test_channels in [1, 2, max_channels]:
+                    if test_channels <= max_channels:
+                        try:
+                            kwargs = {
+                                'format': FORMAT,
+                                'channels': test_channels,
+                                'rate': default_rate,
+                                'frames_per_buffer': CHUNK
+                            }
+                            
+                            if is_input:
+                                kwargs['input'] = True
+                                kwargs['input_device_index'] = device_index
+                            else:
+                                kwargs['output'] = True
+                                kwargs['output_device_index'] = device_index
+                            
+                            test_stream = self.audio.open(**kwargs)
+                            test_stream.close()
+                            return True
+                        except Exception:
+                            continue
+                return False
             except Exception as e2:
-                print(f"Device {device_index} test failed at {preferred_rate}Hz and {default_rate}Hz: {e2}")
+                print(f"Device {device_index} test failed: {e2}")
                 return False
     
     def find_best_audio_devices(self):
@@ -238,7 +252,7 @@ class RobotVoiceAgent:
             raise Exception("No working audio output device found!")
         
         # Test input devices (microphone)
-        input_candidates = [25, 27, 0]  # pulse, default, USB mic
+        input_candidates = [33, 27, 0]  # pulse, default, USB mic
         self.input_device_index = None
         self.input_sample_rate = 24000  # Default
         
@@ -346,6 +360,13 @@ class RobotVoiceAgent:
         """Capture audio from microphone and send to API"""
         try:
             chunk_count = 0
+            volume_history = []
+            
+            print("🎤 Starting audio capture monitoring...")
+            print("📊 Audio Level Monitor (speak to see levels change):")
+            print("   Level: ████████████████████ (0-100)")
+            print("   " + "="*50)
+            
             while self.is_running:
                 try:
                     # Read audio from microphone with timeout handling
@@ -355,9 +376,28 @@ class RobotVoiceAgent:
                     audio_array = np.frombuffer(audio_data, dtype=np.int16)
                     volume = np.sqrt(np.mean(audio_array**2))
                     
-                    # Debug: Print when we detect audio input
+                    # Normalize to 0-100 scale
+                    normalized_volume = min(100, (volume / 32767) * 100)
+                    
+                    # Add to history for smoothing
+                    volume_history.append(normalized_volume)
+                    if len(volume_history) > 10:
+                        volume_history.pop(0)
+                    
+                    # Calculate smoothed volume
+                    smoothed_volume = np.mean(volume_history)
+                    
+                    # Create visual bar
+                    bar_length = int(smoothed_volume / 5)  # 20 chars max
+                    bar = "█" * bar_length + "░" * (20 - bar_length)
+                    
+                    # Show level every 10 chunks to avoid spam
+                    if chunk_count % 10 == 0:
+                        print(f"\r   Level: {bar} ({smoothed_volume:5.1f})", end="", flush=True)
+                    
+                    # Debug: Print when we detect significant audio input
                     if volume > 100:  # Threshold for detecting speech
-                        print(f"🎤 MIC INPUT: Volume={volume:.0f}, Chunk={chunk_count}")
+                        print(f"\n🎤 SPEECH DETECTED: Volume={volume:.0f}, Chunk={chunk_count}")
                     
                     # Resample if needed
                     if self.needs_resampling() and self.input_sample_rate != 24000:
@@ -380,7 +420,7 @@ class RobotVoiceAgent:
                         # This is normal, just continue
                         continue
                     else:
-                        print(f"Microphone read error: {read_error}")
+                        print(f"\nMicrophone read error: {read_error}")
                         # Add a small delay before retrying
                         await asyncio.sleep(0.1)
                         continue
