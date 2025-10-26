@@ -22,9 +22,10 @@ RATE = 24000  # OpenAI Realtime API uses 24kHz
 BYTES_PER_SAMPLE = 2  # 16-bit audio
 
 class RobotVoiceAgent:
-    def __init__(self, api_key: str, output_device_index: int = None):
+    def __init__(self, api_key: str, output_device_index: int = None, input_device_index: int = None):
         self.api_key = api_key
         self.output_device_index = output_device_index  # Robot's speaker device
+        self.input_device_index = input_device_index    # Robot's microphone device
         self.ws = None
         self.audio = pyaudio.PyAudio()
         self.input_stream = None
@@ -35,6 +36,10 @@ class RobotVoiceAgent:
         self.output_buffer = deque()
         self.buffer_lock = threading.Lock()
         self.playback_task = None
+        
+        # Audio configuration based on robot's capabilities
+        self.input_sample_rate = 24000  # OpenAI requirement
+        self.output_sample_rate = 24000  # OpenAI requirement
         
     def list_audio_devices(self):
         """List all available audio devices"""
@@ -88,32 +93,99 @@ class RobotVoiceAgent:
         await self.ws.send(json.dumps(config))
         print("Session configured")
         
+    def test_audio_device(self, device_index: int, is_input: bool = True) -> bool:
+        """Test if an audio device can be opened successfully"""
+        try:
+            kwargs = {
+                'format': FORMAT,
+                'channels': CHANNELS,
+                'rate': self.input_sample_rate if is_input else self.output_sample_rate,
+                'frames_per_buffer': CHUNK
+            }
+            
+            if is_input:
+                kwargs['input'] = True
+                kwargs['input_device_index'] = device_index
+            else:
+                kwargs['output'] = True
+                kwargs['output_device_index'] = device_index
+            
+            test_stream = self.audio.open(**kwargs)
+            test_stream.close()
+            return True
+        except Exception as e:
+            print(f"Device {device_index} test failed: {e}")
+            return False
+    
+    def find_best_audio_devices(self):
+        """Find the best working audio devices for the robot"""
+        print("Finding best audio devices...")
+        
+        # Test output devices (speakers)
+        output_candidates = [0, 38, 33]  # USB Audio, default, pulse
+        self.output_device_index = None
+        
+        for device_id in output_candidates:
+            if self.test_audio_device(device_id, is_input=False):
+                self.output_device_index = device_id
+                print(f"✓ Selected output device {device_id}")
+                break
+        
+        if self.output_device_index is None:
+            raise Exception("No working audio output device found!")
+        
+        # Test input devices (microphone)
+        input_candidates = [25, 27, 0]  # pulse, default, USB mic
+        self.input_device_index = None
+        
+        for device_id in input_candidates:
+            if self.test_audio_device(device_id, is_input=True):
+                self.input_device_index = device_id
+                print(f"✓ Selected input device {device_id}")
+                break
+        
+        if self.input_device_index is None:
+            raise Exception("No working audio input device found!")
+    
     def init_audio(self):
-        """Initialize audio streams with robot's speaker"""
+        """Initialize audio streams with robot's audio devices"""
         print("Initializing audio streams...")
         
-        # List available devices first
-        self.list_audio_devices()
+        # Find best devices if not specified
+        if self.output_device_index is None or self.input_device_index is None:
+            self.find_best_audio_devices()
         
         # Initialize input stream (microphone)
-        self.input_stream = self.audio.open(
-            format=FORMAT,
-            channels=CHANNELS,
-            rate=RATE,
-            input=True,
-            frames_per_buffer=CHUNK
-        )
+        input_kwargs = {
+            'format': FORMAT,
+            'channels': CHANNELS,
+            'rate': self.input_sample_rate,
+            'input': True,
+            'frames_per_buffer': CHUNK
+        }
+        
+        if self.input_device_index is not None:
+            input_kwargs['input_device_index'] = self.input_device_index
+            print(f"Using audio input device {self.input_device_index}")
+        else:
+            print("Using default audio input device")
+        
+        try:
+            self.input_stream = self.audio.open(**input_kwargs)
+            print("✓ Input stream initialized")
+        except Exception as e:
+            print(f"Failed to initialize audio input: {e}")
+            raise
         
         # Initialize output stream (robot's speakers)
         output_kwargs = {
             'format': FORMAT,
             'channels': CHANNELS,
-            'rate': RATE,
+            'rate': self.output_sample_rate,
             'output': True,
             'frames_per_buffer': CHUNK
         }
         
-        # Add device index if specified
         if self.output_device_index is not None:
             output_kwargs['output_device_index'] = self.output_device_index
             print(f"Using audio output device {self.output_device_index}")
@@ -122,10 +194,10 @@ class RobotVoiceAgent:
         
         try:
             self.output_stream = self.audio.open(**output_kwargs)
-            print("Audio streams initialized successfully")
+            print("✓ Output stream initialized")
+            print("Audio streams initialized successfully!")
         except Exception as e:
             print(f"Failed to initialize audio output: {e}")
-            print("Try running audio_setup.py to find the correct device index")
             raise
         
     async def send_audio(self):
@@ -244,23 +316,27 @@ async def main():
         print("Please set OPENAI_API_KEY in your .env file")
         return
     
-    # Get output device index from command line or environment
-    output_device = os.getenv("ROBOT_AUDIO_DEVICE")
-    if output_device:
-        output_device_index = int(output_device)
-    else:
-        output_device_index = None
-        print("No ROBOT_AUDIO_DEVICE specified, using default")
-        print("Set ROBOT_AUDIO_DEVICE=0 in .env or run: export ROBOT_AUDIO_DEVICE=0")
+    # Get device indices from environment variables
+    output_device = os.getenv("ROBOT_AUDIO_OUTPUT_DEVICE")
+    input_device = os.getenv("ROBOT_AUDIO_INPUT_DEVICE")
+    
+    output_device_index = int(output_device) if output_device else None
+    input_device_index = int(input_device) if input_device else None
+    
+    if output_device_index is not None:
+        print(f"Using specified output device: {output_device_index}")
+    if input_device_index is not None:
+        print(f"Using specified input device: {input_device_index}")
     
     # Create and run agent
-    agent = RobotVoiceAgent(api_key, output_device_index)
+    agent = RobotVoiceAgent(api_key, output_device_index, input_device_index)
     
     try:
         await agent.connect()
         await agent.run()
     except Exception as e:
         print(f"Error: {e}")
+        print("Try running with different device indices or let the agent auto-detect")
     finally:
         agent.cleanup()
 
