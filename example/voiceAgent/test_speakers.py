@@ -45,24 +45,14 @@ def test_speakers():
         print(f"   Duration: {DURATION} seconds")
         print(f"   Press Ctrl+C to stop early\n")
         
-        # Try different sample rates (OpenAI needs 24kHz, but test what works)
-        for test_rate in [24000, 44100, 48000]:
-            try:
-                stream = audio.open(
-                    format=FORMAT,
-                    channels=CHANNELS,
-                    rate=test_rate,
-                    output=True,
-                    frames_per_buffer=CHUNK
-                )
-                print(f"✅ Using sample rate: {test_rate}Hz")
-                RATE = test_rate  # Update the rate for the rest of the function
-                break
-            except Exception as e:
-                print(f"❌ Failed at {test_rate}Hz: {e}")
-                continue
-        else:
-            raise Exception("No working sample rate found")
+        # Open audio stream
+        stream = audio.open(
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RATE,
+            output=True,
+            frames_per_buffer=CHUNK
+        )
         
         print("✅ Audio stream opened successfully!")
         print("🔊 Playing test tone...")
@@ -121,25 +111,15 @@ def test_with_device(device_index):
         channels = min(2, device_info['maxOutputChannels'])
         print(f"   Using {channels} channels")
         
-        # Try different sample rates (OpenAI needs 24kHz, but test what works)
-        for test_rate in [24000, 44100, 48000]:
-            try:
-                stream = audio.open(
-                    format=FORMAT,
-                    channels=channels,
-                    rate=test_rate,
-                    output=True,
-                    output_device_index=device_index,
-                    frames_per_buffer=CHUNK
-                )
-                print(f"✅ Using sample rate: {test_rate}Hz")
-                RATE = test_rate  # Update the rate for the rest of the function
-                break
-            except Exception as e:
-                print(f"❌ Failed at {test_rate}Hz: {e}")
-                continue
-        else:
-            raise Exception("No working sample rate found")
+        # Open stream with specific device
+        stream = audio.open(
+            format=FORMAT,
+            channels=channels,
+            rate=RATE,
+            output=True,
+            output_device_index=device_index,
+            frames_per_buffer=CHUNK
+        )
         
         print("✅ Stream opened successfully!")
         print("🔊 Playing test tone...")
