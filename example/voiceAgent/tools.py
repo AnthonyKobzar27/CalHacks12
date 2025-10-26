@@ -12,6 +12,25 @@ def get_current_time(args: Dict[str, Any]) -> Dict[str, Any]:
         "message": f"The current time is {current_time} on {current_date}"
     }
 
+def get_websearch_info(args: Dict[str, Any]) -> Dict[str, Any]:
+    query = args.get("query", "")
+    url = "https://calc-origin-nozzle.flows.pstmn.io/api/default/websearchagent"
+    
+    response = requests.post(url, json={"message": query}, timeout=10)
+    result = response.text
+    
+    return {"message": result}
+
+
+def get_crypto_info(args: Dict[str, Any]) -> Dict[str, Any]:
+    query = args.get("query", "")
+    url = "https://calc-origin-nozzle.flows.pstmn.io/api/default/cryptoagent"
+    
+    response = requests.post(url, json={"message": query}, timeout=30)
+    result = response.text
+    
+    return {"message": result}
+
 
 def get_weather(args: Dict[str, Any]) -> Dict[str, Any]:
     location = args.get("location", "Berkeley")
@@ -52,6 +71,8 @@ def make_api_call(args: Dict[str, Any]) -> Dict[str, Any]:
 
 TOOLS_REGISTRY = {
     "get_current_time": get_current_time,
+    "get_websearch_info": get_websearch_info,
+    "get_crypto_info": get_crypto_info,
     "get_weather": get_weather,
     "make_api_call": make_api_call,
 }
@@ -65,6 +86,36 @@ TOOLS_DEFINITIONS = [
             "type": "object",
             "properties": {},
             "required": []
+        }
+    },
+    {
+        "type": "function",
+        "name": "get_websearch_info",
+        "description": "Search the web for information",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query"
+                }
+            },
+            "required": ["query"]
+        }
+    },
+    {
+        "type": "function",
+        "name": "get_crypto_info",
+        "description": "Get cryptocurrency information",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The crypto query (e.g., 'Bitcoin price', 'ETH')"
+                }
+            },
+            "required": ["query"]
         }
     },
     {
