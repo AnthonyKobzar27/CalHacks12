@@ -3,6 +3,41 @@ import sys, time, random
 
 #Brotha
 
+def raise_arms_celebration(client: B1LocoClient):
+    """Raises both arms in a celebration gesture"""
+
+    left_posture = Posture()
+    left_posture.position = Position(0.3, 0.3, 0.4)
+    left_posture.orientation = Orientation(0.0, 0.0, 0.0)
+    res_left = client.MoveHandEndEffector(left_posture, 1000, B1HandIndex.kLeftHand)
+    
+    right_posture = Posture()
+    right_posture.position = Position(0.3, -0.3, 0.4)
+    right_posture.orientation = Orientation(0.0, 0.0, 0.0)
+    res_right = client.MoveHandEndEffector(right_posture, 1000, B1HandIndex.kRightHand)
+    
+    if res_left != 0:
+        print(f"Left arm raise failed: error = {res_left}")
+    if res_right != 0:
+        print(f"Right arm raise failed: error = {res_right}")
+    
+    return res_left if res_left != 0 else res_right
+
+def celebration_sequence(client: B1LocoClient):
+    """Complete sequence: raise arms -> move forward 1 second -> stop"""
+
+    print("Vamos")
+    
+    res = raise_arms_celebration(client)
+    time.sleep(1.0)
+    res = client.Move(0.8, 0.0, 0.0)
+    time.sleep(1.0)
+
+    res = client.Move(0.0, 0.0, 0.0)  # Stop
+
+    print("Sequence completed successfully!")
+    return 0
+
 def hand_rock(client: B1LocoClient):
     # 定义一个 名为 finger_params 的数组，用于存储每个手指的参数
     finger_params = []
@@ -278,6 +313,12 @@ def main():
         if input_cmd:
             if input_cmd == "mp":
                 res = client.ChangeMode(RobotMode.kPrepare)
+            elif input_cmd == "cel":
+                celebration_sequence(client)
+            elif input_cmd == "wh":
+                res = client.WaveHand(HandAction.kHandOpen)
+            elif input_cmd == "ch":
+                res = client.WaveHand(HandAction.kHandClose)
             elif input_cmd == "md":
                 res = client.ChangeMode(RobotMode.kDamping)
             elif input_cmd == "mw":
@@ -334,9 +375,14 @@ def main():
                 res = client.RotateHead(pitch, yaw)
             elif input_cmd == "mhel":
                 tar_posture = Posture()
-                tar_posture.position = Position(0.35, 0.25, 0.1)
-                tar_posture.orientation = Orientation(-1.57, -1.57, 0.0)
+                # Safer position - closer to robot's center
+                tar_posture.position = Position(0.25, 0.15, 0.2)
+                # Less extreme orientation
+                tar_posture.orientation = Orientation(0.0, 0.0, 0.0)
                 res = client.MoveHandEndEffectorV2(tar_posture, 2000, B1HandIndex.kLeftHand)
+                if res != 0:
+                    print(f"Left hand move failed: error = {res}")
+                    print("Try using 'hand-down' or 'hand-up' commands first")
             elif input_cmd == "gopenl":
                 motion_param = GripperMotionParameter()
                 motion_param.position = 500

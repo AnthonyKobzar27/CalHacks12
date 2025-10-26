@@ -49,7 +49,6 @@ def make_api_call(args: Dict[str, Any]) -> Dict[str, Any]:
         "message": f"API call to {url} completed with status {response.status_code}"
     }
 
-
 TOOLS_REGISTRY = {
     "get_current_time": get_current_time,
     "get_weather": get_weather,

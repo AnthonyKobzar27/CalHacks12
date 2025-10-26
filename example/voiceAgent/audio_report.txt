@@ -1,0 +1,615 @@
+B1 Robot Audio Setup Detection
+========================================
+
+=== Audio Device Detection ===
+PyAudio found 39 audio devices:
+  Device 0: USB Audio Device: - (hw:0,0)
+    - Input channels: 0
+    - Output channels: 2
+    - Default sample rate: 44100.0
+
+  Device 1: XFM-DP-V0.0.18: USB Audio (hw:1,0)
+    - Input channels: 1
+    - Output channels: 0
+    - Default sample rate: 16000.0
+
+  Device 2: NVIDIA Jetson Orin NX HDA: HDMI 0 (hw:2,3)
+    - Input channels: 0
+    - Output channels: 8
+    - Default sample rate: 44100.0
+
+  Device 3: NVIDIA Jetson Orin NX HDA: HDMI 1 (hw:2,7)
+    - Input channels: 0
+    - Output channels: 8
+    - Default sample rate: 44100.0
+
+  Device 4: NVIDIA Jetson Orin NX HDA: HDMI 2 (hw:2,8)
+    - Input channels: 0
+    - Output channels: 8
+    - Default sample rate: 44100.0
+
+  Device 5: NVIDIA Jetson Orin NX HDA: HDMI 3 (hw:2,9)
+    - Input channels: 0
+    - Output channels: 8
+    - Default sample rate: 44100.0
+
+  Device 6: NVIDIA Jetson Orin NX APE: - (hw:3,0)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 7: NVIDIA Jetson Orin NX APE: - (hw:3,1)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 8: NVIDIA Jetson Orin NX APE: - (hw:3,2)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 9: NVIDIA Jetson Orin NX APE: - (hw:3,3)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 10: NVIDIA Jetson Orin NX APE: - (hw:3,4)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 11: NVIDIA Jetson Orin NX APE: - (hw:3,5)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 12: NVIDIA Jetson Orin NX APE: - (hw:3,6)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 13: NVIDIA Jetson Orin NX APE: - (hw:3,7)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 14: NVIDIA Jetson Orin NX APE: - (hw:3,8)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 15: NVIDIA Jetson Orin NX APE: - (hw:3,9)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 16: NVIDIA Jetson Orin NX APE: - (hw:3,10)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 17: NVIDIA Jetson Orin NX APE: - (hw:3,11)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 18: NVIDIA Jetson Orin NX APE: - (hw:3,12)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 19: NVIDIA Jetson Orin NX APE: - (hw:3,13)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 20: NVIDIA Jetson Orin NX APE: - (hw:3,14)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 21: NVIDIA Jetson Orin NX APE: - (hw:3,15)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 22: NVIDIA Jetson Orin NX APE: - (hw:3,16)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 23: NVIDIA Jetson Orin NX APE: - (hw:3,17)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 24: NVIDIA Jetson Orin NX APE: - (hw:3,18)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 25: NVIDIA Jetson Orin NX APE: - (hw:3,19)
+    - Input channels: 16
+    - Output channels: 16
+    - Default sample rate: 44100.0
+
+  Device 26: sysdefault
+    - Input channels: 0
+    - Output channels: 128
+    - Default sample rate: 48000.0
+
+  Device 27: front
+    - Input channels: 0
+    - Output channels: 2
+    - Default sample rate: 44100.0
+
+  Device 28: surround40
+    - Input channels: 0
+    - Output channels: 2
+    - Default sample rate: 44100.0
+
+  Device 29: iec958
+    - Input channels: 0
+    - Output channels: 2
+    - Default sample rate: 44100.0
+
+  Device 30: spdif
+    - Input channels: 0
+    - Output channels: 2
+    - Default sample rate: 44100.0
+
+  Device 31: samplerate
+    - Input channels: 0
+    - Output channels: 128
+    - Default sample rate: 44100.0
+
+  Device 32: speexrate
+    - Input channels: 0
+    - Output channels: 128
+    - Default sample rate: 44100.0
+
+  Device 33: pulse
+    - Input channels: 32
+    - Output channels: 32
+    - Default sample rate: 44100.0
+
+  Device 34: upmix
+    - Input channels: 0
+    - Output channels: 8
+    - Default sample rate: 44100.0
+
+  Device 35: vdownmix
+    - Input channels: 0
+    - Output channels: 6
+    - Default sample rate: 44100.0
+
+  Device 36: demixer
+    - Input channels: 0
+    - Output channels: 128
+    - Default sample rate: 48000.0
+
+  Device 37: dmix
+    - Input channels: 0
+    - Output channels: 2
+    - Default sample rate: 48000.0
+
+  Device 38: default
+    - Input channels: 32
+    - Output channels: 32
+    - Default sample rate: 44100.0
+
+
+=== ALSA Device Detection ===
+ALSA Playback devices:
+**** List of PLAYBACK Hardware Devices ****
+card 0: Device [USB Audio Device], device 0: USB Audio [USB Audio]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 2: HDA [NVIDIA Jetson Orin NX HDA], device 3: HDMI 0 [HDMI 0]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 2: HDA [NVIDIA Jetson Orin NX HDA], device 7: HDMI 1 [HDMI 1]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 2: HDA [NVIDIA Jetson Orin NX HDA], device 8: HDMI 2 [HDMI 2]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 2: HDA [NVIDIA Jetson Orin NX HDA], device 9: HDMI 3 [HDMI 3]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 0: tegra-dlink-0 XBAR-ADMAIF1-0 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 1: tegra-dlink-1 XBAR-ADMAIF2-1 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 2: tegra-dlink-2 XBAR-ADMAIF3-2 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 3: tegra-dlink-3 XBAR-ADMAIF4-3 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 4: tegra-dlink-4 XBAR-ADMAIF5-4 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 5: tegra-dlink-5 XBAR-ADMAIF6-5 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 6: tegra-dlink-6 XBAR-ADMAIF7-6 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 7: tegra-dlink-7 XBAR-ADMAIF8-7 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 8: tegra-dlink-8 XBAR-ADMAIF9-8 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 9: tegra-dlink-9 XBAR-ADMAIF10-9 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 10: tegra-dlink-10 XBAR-ADMAIF11-10 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 11: tegra-dlink-11 XBAR-ADMAIF12-11 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 12: tegra-dlink-12 XBAR-ADMAIF13-12 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 13: tegra-dlink-13 XBAR-ADMAIF14-13 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 14: tegra-dlink-14 XBAR-ADMAIF15-14 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 15: tegra-dlink-15 XBAR-ADMAIF16-15 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 16: tegra-dlink-16 XBAR-ADMAIF17-16 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 17: tegra-dlink-17 XBAR-ADMAIF18-17 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 18: tegra-dlink-18 XBAR-ADMAIF19-18 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 19: tegra-dlink-19 XBAR-ADMAIF20-19 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+ALSA Recording devices:
+**** List of CAPTURE Hardware Devices ****
+card 1: XFMDPV0018 [XFM-DP-V0.0.18], device 0: USB Audio [USB Audio]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 0: tegra-dlink-0 XBAR-ADMAIF1-0 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 1: tegra-dlink-1 XBAR-ADMAIF2-1 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 2: tegra-dlink-2 XBAR-ADMAIF3-2 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 3: tegra-dlink-3 XBAR-ADMAIF4-3 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 4: tegra-dlink-4 XBAR-ADMAIF5-4 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 5: tegra-dlink-5 XBAR-ADMAIF6-5 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 6: tegra-dlink-6 XBAR-ADMAIF7-6 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 7: tegra-dlink-7 XBAR-ADMAIF8-7 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 8: tegra-dlink-8 XBAR-ADMAIF9-8 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 9: tegra-dlink-9 XBAR-ADMAIF10-9 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 10: tegra-dlink-10 XBAR-ADMAIF11-10 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 11: tegra-dlink-11 XBAR-ADMAIF12-11 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 12: tegra-dlink-12 XBAR-ADMAIF13-12 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 13: tegra-dlink-13 XBAR-ADMAIF14-13 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 14: tegra-dlink-14 XBAR-ADMAIF15-14 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 15: tegra-dlink-15 XBAR-ADMAIF16-15 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 16: tegra-dlink-16 XBAR-ADMAIF17-16 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 17: tegra-dlink-17 XBAR-ADMAIF18-17 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 18: tegra-dlink-18 XBAR-ADMAIF19-18 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: APE [NVIDIA Jetson Orin NX APE], device 19: tegra-dlink-19 XBAR-ADMAIF20-19 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+
+=== PulseAudio Device Detection ===
+PulseAudio sinks (output devices):
+0	alsa_output.usb-C-Media_Electronics_Inc._USB_Audio_Device-00.analog-stereo	module-alsa-card.c	s16le 2ch 44100Hz	SUSPENDED
+1	alsa_output.platform-sound.analog-stereo	module-alsa-card.c	s16le 2ch 44100Hz	SUSPENDED
+
+PulseAudio sources (input devices):
+0	alsa_output.usb-C-Media_Electronics_Inc._USB_Audio_Device-00.analog-stereo.monitor	module-alsa-card.c	s16le 2ch 44100Hz	SUSPENDED
+1	alsa_input.usb-iflytek_XFM-DP-V0.0.18_bc001440821347c2210-01.mono-fallback	module-alsa-card.c	s16le 1ch 16000Hz	SUSPENDED
+2	alsa_output.platform-sound.analog-stereo.monitor	module-alsa-card.c	s16le 2ch 44100Hz	SUSPENDED
+3	alsa_input.platform-sound.analog-stereo	module-alsa-card.c	s16le 2ch 44100Hz	SUSPENDED
+
+
+=== Audio Output Test ===
+Found 38 output devices:
+  0: USB Audio Device: - (hw:0,0)
+  2: NVIDIA Jetson Orin NX HDA: HDMI 0 (hw:2,3)
+  3: NVIDIA Jetson Orin NX HDA: HDMI 1 (hw:2,7)
+  4: NVIDIA Jetson Orin NX HDA: HDMI 2 (hw:2,8)
+  5: NVIDIA Jetson Orin NX HDA: HDMI 3 (hw:2,9)
+  6: NVIDIA Jetson Orin NX APE: - (hw:3,0)
+  7: NVIDIA Jetson Orin NX APE: - (hw:3,1)
+  8: NVIDIA Jetson Orin NX APE: - (hw:3,2)
+  9: NVIDIA Jetson Orin NX APE: - (hw:3,3)
+  10: NVIDIA Jetson Orin NX APE: - (hw:3,4)
+  11: NVIDIA Jetson Orin NX APE: - (hw:3,5)
+  12: NVIDIA Jetson Orin NX APE: - (hw:3,6)
+  13: NVIDIA Jetson Orin NX APE: - (hw:3,7)
+  14: NVIDIA Jetson Orin NX APE: - (hw:3,8)
+  15: NVIDIA Jetson Orin NX APE: - (hw:3,9)
+  16: NVIDIA Jetson Orin NX APE: - (hw:3,10)
+  17: NVIDIA Jetson Orin NX APE: - (hw:3,11)
+  18: NVIDIA Jetson Orin NX APE: - (hw:3,12)
+  19: NVIDIA Jetson Orin NX APE: - (hw:3,13)
+  20: NVIDIA Jetson Orin NX APE: - (hw:3,14)
+  21: NVIDIA Jetson Orin NX APE: - (hw:3,15)
+  22: NVIDIA Jetson Orin NX APE: - (hw:3,16)
+  23: NVIDIA Jetson Orin NX APE: - (hw:3,17)
+  24: NVIDIA Jetson Orin NX APE: - (hw:3,18)
+  25: NVIDIA Jetson Orin NX APE: - (hw:3,19)
+  26: sysdefault
+  27: front
+  28: surround40
+  29: iec958
+  30: spdif
+  31: samplerate
+  32: speexrate
+  33: pulse
+  34: upmix
+  35: vdownmix
+  36: demixer
+  37: dmix
+  38: default
+
+Testing device 0: USB Audio Device: - (hw:0,0)
+  ✓ Successfully opened device 0
+
+Testing device 2: NVIDIA Jetson Orin NX HDA: HDMI 0 (hw:2,3)
+  ✓ Successfully opened device 2
+
+Testing device 3: NVIDIA Jetson Orin NX HDA: HDMI 1 (hw:2,7)
+  ✓ Successfully opened device 3
+
+Testing device 4: NVIDIA Jetson Orin NX HDA: HDMI 2 (hw:2,8)
+  ✓ Successfully opened device 4
+
+Testing device 5: NVIDIA Jetson Orin NX HDA: HDMI 3 (hw:2,9)
+  ✓ Successfully opened device 5
+
+Testing device 6: NVIDIA Jetson Orin NX APE: - (hw:3,0)
+  ✓ Successfully opened device 6
+
+Testing device 7: NVIDIA Jetson Orin NX APE: - (hw:3,1)
+  ✓ Successfully opened device 7
+
+Testing device 8: NVIDIA Jetson Orin NX APE: - (hw:3,2)
+  ✓ Successfully opened device 8
+
+Testing device 9: NVIDIA Jetson Orin NX APE: - (hw:3,3)
+  ✓ Successfully opened device 9
+
+Testing device 10: NVIDIA Jetson Orin NX APE: - (hw:3,4)
+  ✓ Successfully opened device 10
+
+Testing device 11: NVIDIA Jetson Orin NX APE: - (hw:3,5)
+  ✓ Successfully opened device 11
+
+Testing device 12: NVIDIA Jetson Orin NX APE: - (hw:3,6)
+  ✓ Successfully opened device 12
+
+Testing device 13: NVIDIA Jetson Orin NX APE: - (hw:3,7)
+  ✓ Successfully opened device 13
+
+Testing device 14: NVIDIA Jetson Orin NX APE: - (hw:3,8)
+  ✓ Successfully opened device 14
+
+Testing device 15: NVIDIA Jetson Orin NX APE: - (hw:3,9)
+  ✓ Successfully opened device 15
+
+Testing device 16: NVIDIA Jetson Orin NX APE: - (hw:3,10)
+  ✓ Successfully opened device 16
+
+Testing device 17: NVIDIA Jetson Orin NX APE: - (hw:3,11)
+  ✓ Successfully opened device 17
+
+Testing device 18: NVIDIA Jetson Orin NX APE: - (hw:3,12)
+  ✓ Successfully opened device 18
+
+Testing device 19: NVIDIA Jetson Orin NX APE: - (hw:3,13)
+  ✓ Successfully opened device 19
+
+Testing device 20: NVIDIA Jetson Orin NX APE: - (hw:3,14)
+  ✓ Successfully opened device 20
+
+Testing device 21: NVIDIA Jetson Orin NX APE: - (hw:3,15)
+  ✓ Successfully opened device 21
+
+Testing device 22: NVIDIA Jetson Orin NX APE: - (hw:3,16)
+  ✓ Successfully opened device 22
+
+Testing device 23: NVIDIA Jetson Orin NX APE: - (hw:3,17)
+  ✓ Successfully opened device 23
+
+Testing device 24: NVIDIA Jetson Orin NX APE: - (hw:3,18)
+  ✓ Successfully opened device 24
+
+Testing device 25: NVIDIA Jetson Orin NX APE: - (hw:3,19)
+  ✓ Successfully opened device 25
+
+Testing device 26: sysdefault
+  ✓ Successfully opened device 26
+
+Testing device 27: front
+  ✓ Successfully opened device 27
+
+Testing device 28: surround40
+  ✓ Successfully opened device 28
+
+Testing device 29: iec958
+  ✓ Successfully opened device 29
+
+Testing device 30: spdif
+  ✓ Successfully opened device 30
+
+Testing device 31: samplerate
+  ✓ Successfully opened device 31
+
+Testing device 32: speexrate
+  ✓ Successfully opened device 32
+
+Testing device 33: pulse
+  ✓ Successfully opened device 33
+
+Testing device 34: upmix
+  ✗ Failed to open device 34: [Errno -9985] Device unavailable
+
+Testing device 35: vdownmix
+  ✗ Failed to open device 35: [Errno -9985] Device unavailable
+
+Testing device 36: demixer
+  ✓ Successfully opened device 36
+
+Testing device 37: dmix
+  ✗ Failed to open device 37: [Errno -9985] Device unavailable
+
+Testing device 38: default
+  ✓ Successfully opened device 38
+
+=== Audio Input Test ===
+Found 23 input devices:
+  0: XFM-DP-V0.0.18: USB Audio (hw:1,0)
+  5: NVIDIA Jetson Orin NX APE: - (hw:3,0)
+  6: NVIDIA Jetson Orin NX APE: - (hw:3,1)
+  7: NVIDIA Jetson Orin NX APE: - (hw:3,2)
+  8: NVIDIA Jetson Orin NX APE: - (hw:3,3)
+  9: NVIDIA Jetson Orin NX APE: - (hw:3,4)
+  10: NVIDIA Jetson Orin NX APE: - (hw:3,5)
+  11: NVIDIA Jetson Orin NX APE: - (hw:3,6)
+  12: NVIDIA Jetson Orin NX APE: - (hw:3,7)
+  13: NVIDIA Jetson Orin NX APE: - (hw:3,8)
+  14: NVIDIA Jetson Orin NX APE: - (hw:3,9)
+  15: NVIDIA Jetson Orin NX APE: - (hw:3,10)
+  16: NVIDIA Jetson Orin NX APE: - (hw:3,11)
+  17: NVIDIA Jetson Orin NX APE: - (hw:3,12)
+  18: NVIDIA Jetson Orin NX APE: - (hw:3,13)
+  19: NVIDIA Jetson Orin NX APE: - (hw:3,14)
+  20: NVIDIA Jetson Orin NX APE: - (hw:3,15)
+  21: NVIDIA Jetson Orin NX APE: - (hw:3,16)
+  22: NVIDIA Jetson Orin NX APE: - (hw:3,17)
+  23: NVIDIA Jetson Orin NX APE: - (hw:3,18)
+  24: NVIDIA Jetson Orin NX APE: - (hw:3,19)
+  25: pulse
+  27: default
+
+Testing input device 0: XFM-DP-V0.0.18: USB Audio (hw:1,0)
+  ✗ Failed to open input device 0: [Errno -9997] Invalid sample rate
+
+Testing input device 5: NVIDIA Jetson Orin NX APE: - (hw:3,0)
+  ✓ Successfully opened input device 5
+
+Testing input device 6: NVIDIA Jetson Orin NX APE: - (hw:3,1)
+  ✓ Successfully opened input device 6
+
+Testing input device 7: NVIDIA Jetson Orin NX APE: - (hw:3,2)
+  ✓ Successfully opened input device 7
+
+Testing input device 8: NVIDIA Jetson Orin NX APE: - (hw:3,3)
+  ✓ Successfully opened input device 8
+
+Testing input device 9: NVIDIA Jetson Orin NX APE: - (hw:3,4)
+  ✓ Successfully opened input device 9
+
+Testing input device 10: NVIDIA Jetson Orin NX APE: - (hw:3,5)
+  ✓ Successfully opened input device 10
+
+Testing input device 11: NVIDIA Jetson Orin NX APE: - (hw:3,6)
+  ✓ Successfully opened input device 11
+
+Testing input device 12: NVIDIA Jetson Orin NX APE: - (hw:3,7)
+  ✓ Successfully opened input device 12
+
+Testing input device 13: NVIDIA Jetson Orin NX APE: - (hw:3,8)
+  ✓ Successfully opened input device 13
+
+Testing input device 14: NVIDIA Jetson Orin NX APE: - (hw:3,9)
+  ✓ Successfully opened input device 14
+
+Testing input device 15: NVIDIA Jetson Orin NX APE: - (hw:3,10)
+  ✓ Successfully opened input device 15
+
+Testing input device 16: NVIDIA Jetson Orin NX APE: - (hw:3,11)
+  ✓ Successfully opened input device 16
+
+Testing input device 17: NVIDIA Jetson Orin NX APE: - (hw:3,12)
+  ✓ Successfully opened input device 17
+
+Testing input device 18: NVIDIA Jetson Orin NX APE: - (hw:3,13)
+  ✓ Successfully opened input device 18
+
+Testing input device 19: NVIDIA Jetson Orin NX APE: - (hw:3,14)
+  ✓ Successfully opened input device 19
+
+Testing input device 20: NVIDIA Jetson Orin NX APE: - (hw:3,15)
+  ✓ Successfully opened input device 20
+
+Testing input device 21: NVIDIA Jetson Orin NX APE: - (hw:3,16)
+  ✓ Successfully opened input device 21
+
+Testing input device 22: NVIDIA Jetson Orin NX APE: - (hw:3,17)
+  ✓ Successfully opened input device 22
+
+Testing input device 23: NVIDIA Jetson Orin NX APE: - (hw:3,18)
+  ✓ Successfully opened input device 23
+
+Testing input device 24: NVIDIA Jetson Orin NX APE: - (hw:3,19)
+  ✓ Successfully opened input device 24
+
+Testing input device 25: pulse
+  ✓ Successfully opened input device 25
+
+Testing input device 27: default
+  ✓ Successfully opened input device 27
+
+=== Recommendations ===
+1. Look for devices with 'robot', 'speaker', 'output' in the name
+2. Test each output device to see which produces sound
+3. Note the device index for the robot's speakers
+4. Note the device index for the robot's microphone
+5. Use those device indices in your voice agent
