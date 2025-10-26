@@ -13,28 +13,80 @@ def set_robot_client(client: B1LocoClient):
 def move_robot(args: Dict[str, Any]) -> Dict[str, Any]:
     direction = args.get("direction", "forward").lower()
     distance = args.get("distance", 1.0)
+    speed_modifier = args.get("speed_modifier", "normal").lower()
+    duration_modifier = args.get("duration_modifier", "normal").lower()
     
-    x, y, z = 0.0, 0.0, 0.0
+    # Base speeds for each direction
+    base_speeds = {
+        "forward": 0.8,
+        "backward": -0.2,
+        "left": 0.2,
+        "right": -0.2
+    }
     
-    if direction == "forward":
-        x = 0.8
-    elif direction == "backward":
-        x = -0.2
-    elif direction == "left":
-        y = 0.2
-    elif direction == "right":
-        y = -0.2
-    elif direction == "stop":
+    # Speed modifiers
+    speed_multipliers = {
+        "slow": 0.3,
+        "slowly": 0.3,
+        "bit": 0.4,
+        "little": 0.4,
+        "normal": 1.0,
+        "fast": 1.5,
+        "quickly": 1.5,
+        "lot": 1.5,
+        "much": 1.5
+    }
+    
+    # Duration modifiers
+    duration_multipliers = {
+        "short": 0.3,
+        "briefly": 0.3,
+        "moment": 0.5,
+        "normal": 1.0,
+        "long": 3.0,
+        "long_time": 3.0,
+        "extended": 3.0,
+        "while": 2.0
+    }
+    
+    # Apply duration modifier to distance
+    final_distance = distance * duration_multipliers.get(duration_modifier, 1.0)
+    
+    if direction == "stop":
         x, y, z = 0.0, 0.0, 0.0
+        speed_multiplier = 1.0
+    else:
+        base_speed = base_speeds.get(direction, 0.0)
+        speed_multiplier = speed_multipliers.get(speed_modifier, 1.0)
+        
+        if direction == "forward":
+            x = base_speed * speed_multiplier
+            y, z = 0.0, 0.0
+        elif direction == "backward":
+            x = base_speed * speed_multiplier
+            y, z = 0.0, 0.0
+        elif direction == "left":
+            x, y, z = 0.0, base_speed * speed_multiplier, 0.0
+        elif direction == "right":
+            x, y, z = 0.0, base_speed * speed_multiplier, 0.0
+        else:
+            return {
+                "error": f"Invalid direction: {direction}",
+                "message": f"Unknown direction: {direction}"
+            }
     
     res = _robot_client.Move(x, y, z)
-    time.sleep(distance)
+    time.sleep(final_distance)
     _robot_client.Move(0.0, 0.0, 0.0)
     
     return {
         "direction": direction,
+        "speed_modifier": speed_modifier,
+        "duration_modifier": duration_modifier,
+        "actual_speed": abs(x) if x != 0 else abs(y),
+        "final_duration": final_distance,
         "status": "success" if res == 0 else "failed",
-        "message": f"Robot moved {direction}"
+        "message": f"Robot moved {direction} {speed_modifier} for {final_distance:.1f}s"
     }
 
 def rotate_head(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -167,7 +219,7 @@ ROBOT_TOOLS_DEFINITIONS = [
     {
         "type": "function",
         "name": "move_robot",
-        "description": "Move the robot in a direction (forward, backward, left, right, stop)",
+        "description": "Move the robot in a direction with speed control (forward, backward, left, right, stop)",
         "parameters": {
             "type": "object",
             "properties": {
@@ -179,6 +231,16 @@ ROBOT_TOOLS_DEFINITIONS = [
                 "distance": {
                     "type": "number",
                     "description": "Duration in seconds to move (default 1.0)"
+                },
+                "speed_modifier": {
+                    "type": "string",
+                    "enum": ["slow", "slowly", "bit", "little", "normal", "fast", "quickly", "lot", "much"],
+                    "description": "Speed modifier: 'slow/slowly/bit/little' for gentle movement, 'normal' for standard speed, 'fast/quickly/lot/much' for faster movement"
+                },
+                "duration_modifier": {
+                    "type": "string",
+                    "enum": ["short", "briefly", "moment", "normal", "long", "long_time", "extended", "while"],
+                    "description": "Duration modifier: 'short/briefly/moment' for quick movements, 'normal' for standard duration, 'long/long_time/extended/while' for longer movements"
                 }
             },
             "required": ["direction"]
