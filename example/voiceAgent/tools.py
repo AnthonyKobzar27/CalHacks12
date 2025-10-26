@@ -22,6 +22,8 @@ def get_websearch_info(args: Dict[str, Any]) -> Dict[str, Any]:
     return {"message": result}
 
 
+
+
 def get_crypto_info(args: Dict[str, Any]) -> Dict[str, Any]:
     query = args.get("query", "")
     url = "https://calc-origin-nozzle.flows.pstmn.io/api/default/cryptoagent"
@@ -45,6 +47,36 @@ def get_weather(args: Dict[str, Any]) -> Dict[str, Any]:
         "condition": weather_desc,
         "message": f"The weather in {location} is {weather_desc} with a temperature of {temp_f}°F"
     }
+
+
+def make_transaction(args: Dict[str, Any]) -> Dict[str, Any]:
+    recipient = args.get("recipient", "0x3f6bb1bdaaacafd020194d452a5a1afce89114cd5fafa3aebc9b214e83aa2ef2")
+    amount = args.get("amount", "0.001")
+    url = "http://localhost:3000/api/cryptobot/send"
+    
+    payload = {
+        "recipient": recipient,
+        "amount": str(amount)
+    }
+    
+    response = requests.post(url, json=payload, timeout=30)
+    
+    if response.status_code == 200:
+        data = response.json()
+        return {
+            "success": True,
+            "digest": data.get("digest", ""),
+            "from": data.get("from", ""),
+            "to": data.get("to", ""),
+            "amount": data.get("amount", ""),
+            "explorer": data.get("explorer", ""),
+            "message": f"Transaction sent! Hash: {data.get('digest', 'unknown')}"
+        }
+    else:
+        return {
+            "success": False,
+            "message": f"Transaction failed with status {response.status_code}"
+        }
 
 
 def make_api_call(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -74,6 +106,7 @@ TOOLS_REGISTRY = {
     "get_websearch_info": get_websearch_info,
     "get_crypto_info": get_crypto_info,
     "get_weather": get_weather,
+    "make_transaction": make_transaction,
     "make_api_call": make_api_call,
 }
 
@@ -131,6 +164,25 @@ TOOLS_DEFINITIONS = [
                 }
             },
             "required": ["location"]
+        }
+    },
+    {
+        "type": "function",
+        "name": "make_transaction",
+        "description": "Send SUI cryptocurrency to a recipient",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "recipient": {
+                    "type": "string",
+                    "description": "The SUI address to send to (must start with 0x)"
+                },
+                "amount": {
+                    "type": "string",
+                    "description": "Amount of SUI to send (e.g., '0.001', '1.5')"
+                }
+            },
+            "required": ["recipient", "amount"]
         }
     },
     {
