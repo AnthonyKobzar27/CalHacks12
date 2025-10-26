@@ -361,6 +361,8 @@ class RobotVoiceAgent:
         try:
             chunk_count = 0
             volume_history = []
+            consecutive_errors = 0
+            max_consecutive_errors = 10
             
             print("🎤 Starting audio capture monitoring...")
             print("📊 Audio Level Monitor (speak to see levels change):")
@@ -401,26 +403,48 @@ class RobotVoiceAgent:
                     
                     # Resample if needed
                     if self.needs_resampling() and self.input_sample_rate != 24000:
-                        audio_data = self.resample_audio(audio_data, self.input_sample_rate, 24000)
+                        try:
+                            audio_data = self.resample_audio(audio_data, self.input_sample_rate, 24000)
+                        except Exception as resample_error:
+                            print(f"\n⚠️ Resampling error: {resample_error}")
+                            continue
                     
                     # Encode to base64
-                    audio_b64 = base64.b64encode(audio_data).decode('utf-8')
+                    try:
+                        audio_b64 = base64.b64encode(audio_data).decode('utf-8')
+                    except Exception as encode_error:
+                        print(f"\n⚠️ Base64 encoding error: {encode_error}")
+                        continue
                     
                     # Send to API
-                    message = {
-                        "type": "input_audio_buffer.append",
-                        "audio": audio_b64
-                    }
-                    
-                    await self.ws.send(json.dumps(message))
-                    chunk_count += 1
+                    try:
+                        message = {
+                            "type": "input_audio_buffer.append",
+                            "audio": audio_b64
+                        }
+                        await self.ws.send(json.dumps(message))
+                        chunk_count += 1
+                        consecutive_errors = 0  # Reset error counter on success
+                    except Exception as send_error:
+                        consecutive_errors += 1
+                        print(f"\n⚠️ WebSocket send error: {send_error}")
+                        if consecutive_errors >= max_consecutive_errors:
+                            print(f"❌ Too many consecutive send errors ({consecutive_errors}), stopping audio capture")
+                            break
+                        await asyncio.sleep(0.1)
+                        continue
                     
                 except Exception as read_error:
+                    consecutive_errors += 1
                     if "Input overflowed" in str(read_error):
                         # This is normal, just continue
+                        consecutive_errors = 0
                         continue
                     else:
-                        print(f"\nMicrophone read error: {read_error}")
+                        print(f"\n⚠️ Microphone read error: {read_error}")
+                        if consecutive_errors >= max_consecutive_errors:
+                            print(f"❌ Too many consecutive read errors ({consecutive_errors}), stopping audio capture")
+                            break
                         # Add a small delay before retrying
                         await asyncio.sleep(0.1)
                         continue
@@ -429,7 +453,18 @@ class RobotVoiceAgent:
                 await asyncio.sleep(0.01)
                 
         except Exception as e:
-            print(f"Error in send_audio: {e}")
+            print(f"❌ Critical error in send_audio: {e}")
+            print("🔄 Attempting to recover...")
+            # Try to recover by reinitializing audio
+            try:
+                if self.input_stream:
+                    self.input_stream.stop_stream()
+                    self.input_stream.close()
+                self.init_audio()
+                print("✅ Audio recovery successful")
+            except Exception as recovery_error:
+                print(f"❌ Audio recovery failed: {recovery_error}")
+                self.is_running = False
     
     def start_playback(self):
         """Start continuous audio playback in a separate thread"""
@@ -474,43 +509,83 @@ class RobotVoiceAgent:
         """Receive audio from API and add to playback buffer"""
         try:
             message_count = 0
+            consecutive_errors = 0
+            max_consecutive_errors = 5
+            
             async for message in self.ws:
-                data = json.loads(message)
-                message_count += 1
-                
-                # Debug: Print all message types we receive
-                msg_type = data.get("type", "unknown")
-                print(f"📡 WEBSOCKET: Received {msg_type} (message #{message_count})")
-                
-                if data.get("type") == "response.audio.delta":
-                    # Decode base64 audio
-                    audio_b64 = data["audio"]
-                    audio_data = base64.b64decode(audio_b64)
+                try:
+                    data = json.loads(message)
+                    message_count += 1
+                    consecutive_errors = 0  # Reset error counter on success
                     
-                    # Add to playback buffer
-                    with self.buffer_lock:
-                        self.output_buffer.append(audio_data)
+                    # Debug: Print all message types we receive
+                    msg_type = data.get("type", "unknown")
+                    print(f"📡 WEBSOCKET: Received {msg_type} (message #{message_count})")
                     
-                    print(f"🎵 AUDIO RECEIVED: Added {len(audio_data)} bytes to playback buffer")
-                
-                elif data.get("type") == "response.done":
-                    print("✅ Response complete")
-                    break
+                    if data.get("type") == "response.audio.delta":
+                        # Decode base64 audio
+                        try:
+                            audio_b64 = data["audio"]
+                            audio_data = base64.b64decode(audio_b64)
+                            
+                            # Add to playback buffer
+                            with self.buffer_lock:
+                                self.output_buffer.append(audio_data)
+                            
+                            print(f"🎵 AUDIO RECEIVED: Added {len(audio_data)} bytes to playback buffer")
+                        except Exception as audio_error:
+                            print(f"⚠️ Audio processing error: {audio_error}")
+                            continue
                     
-                elif data.get("type") == "session.created":
-                    print("✅ Session created successfully")
+                    elif data.get("type") == "response.done":
+                        print("✅ Response complete")
+                        break
+                        
+                    elif data.get("type") == "session.created":
+                        print("✅ Session created successfully")
+                        
+                    elif data.get("type") == "session.updated":
+                        print("✅ Session updated successfully")
+                        
+                    elif data.get("type") == "input_audio_buffer.speech_started":
+                        print("🎤 SPEECH DETECTED: OpenAI detected speech start")
+                        
+                    elif data.get("type") == "input_audio_buffer.speech_stopped":
+                        print("🎤 SPEECH ENDED: OpenAI detected speech end")
                     
-                elif data.get("type") == "session.updated":
-                    print("✅ Session updated successfully")
+                    elif data.get("type") == "error":
+                        error_info = data.get("error", {})
+                        error_msg = error_info.get("message", "Unknown error")
+                        error_code = error_info.get("code", "unknown")
+                        print(f"❌ API Error [{error_code}]: {error_msg}")
+                        # Don't break on API errors, continue listening
+                        
+                except json.JSONDecodeError as json_error:
+                    consecutive_errors += 1
+                    print(f"⚠️ JSON decode error: {json_error}")
+                    if consecutive_errors >= max_consecutive_errors:
+                        print(f"❌ Too many consecutive JSON errors ({consecutive_errors}), stopping")
+                        break
+                    continue
                     
-                elif data.get("type") == "input_audio_buffer.speech_started":
-                    print("🎤 SPEECH DETECTED: OpenAI detected speech start")
-                    
-                elif data.get("type") == "input_audio_buffer.speech_stopped":
-                    print("🎤 SPEECH ENDED: OpenAI detected speech end")
+                except Exception as message_error:
+                    consecutive_errors += 1
+                    print(f"⚠️ Message processing error: {message_error}")
+                    if consecutive_errors >= max_consecutive_errors:
+                        print(f"❌ Too many consecutive message errors ({consecutive_errors}), stopping")
+                        break
+                    continue
                     
         except Exception as e:
-            print(f"Error in receive_audio: {e}")
+            print(f"❌ Critical error in receive_audio: {e}")
+            print("🔄 Attempting to reconnect...")
+            # Try to reconnect
+            try:
+                await self.connect()
+                print("✅ Reconnection successful")
+            except Exception as reconnect_error:
+                print(f"❌ Reconnection failed: {reconnect_error}")
+                self.is_running = False
     
     async def run(self):
         """Main run loop"""
