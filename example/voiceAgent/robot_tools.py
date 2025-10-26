@@ -2,7 +2,7 @@ import sys
 import time
 from typing import Dict, Any
 sys.path.insert(0, '../..')
-from booster_robotics_sdk_python import B1LocoClient, RobotMode, B1HandIndex, Position, Orientation, Posture, DexterousFingerParameter
+from booster_robotics_sdk_python import B1LocoClient, RobotMode, B1HandIndex, B1HandAction, Position, Orientation, Posture, DexterousFingerParameter
 
 _robot_client = None
 
@@ -114,6 +114,27 @@ def hand_gesture(args: Dict[str, Any]) -> Dict[str, Any]:
         "message": f"Hand gesture {gesture} performed"
     }
 
+def wave_hand(args: Dict[str, Any]) -> Dict[str, Any]:
+    action = args.get("action", "open").lower()
+    
+    if action == "open":
+        hand_action = B1HandAction.kHandOpen
+    elif action == "close":
+        hand_action = B1HandAction.kHandClose
+    else:
+        return {
+            "error": "Invalid action. Must be 'open' or 'close'",
+            "message": f"Unknown wave action: {action}"
+        }
+    
+    res = _robot_client.WaveHand(hand_action)
+    
+    return {
+        "action": action,
+        "status": "success" if res == 0 else "failed",
+        "message": f"Robot waved hand ({action})"
+    }
+
 def change_mode(args: Dict[str, Any]) -> Dict[str, Any]:
     mode = args.get("mode", "walking").lower()
     
@@ -138,6 +159,7 @@ ROBOT_TOOLS_REGISTRY = {
     "rotate_head": rotate_head,
     "celebration": celebration,
     "hand_gesture": hand_gesture,
+    "wave_hand": wave_hand,
     "change_mode": change_mode,
 }
 
@@ -202,6 +224,22 @@ ROBOT_TOOLS_DEFINITIONS = [
                 }
             },
             "required": ["gesture"]
+        }
+    },
+    {
+        "type": "function",
+        "name": "wave_hand",
+        "description": "Wave the robot's hand (open or close)",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["open", "close"],
+                    "description": "Hand wave action - 'open' to wave open hand, 'close' to wave closed hand"
+                }
+            },
+            "required": ["action"]
         }
     },
     {

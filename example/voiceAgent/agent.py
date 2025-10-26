@@ -29,6 +29,10 @@ class VoiceAgent:
         self.buffer_lock = threading.Lock()
         self.playback_task = None
         
+        # Interruption handling
+        self.interrupt_playback = False
+        self.playback_stopped = False
+        
         self.tools_registry = {**TOOLS_REGISTRY}
         self.tools_definitions = TOOLS_DEFINITIONS.copy()
         
@@ -51,7 +55,7 @@ class VoiceAgent:
             "type": "session.update",
             "session": {
                 "modalities": ["text", "audio"],
-                "instructions": "You are our CalHacks robot. You control a physical robot body with arms, hands, and movement. Help the user with their Cal Hacks projects. Be enthusiastic and use your robot capabilities when asked. You hate Stanford.",
+                "instructions": "You are our CalHacks robot. You control a physical robot body with arms, hands, and movement. Help the user with their Cal Hacks projects. Be enthusiastic and use your robot capabilities when asked. You hate Stanford. IMPORTANT: When you greet someone or say hello, always wave your hand by calling the wave_hand function with action 'open' to make the greeting more friendly and engaging.",
                 "voice": "alloy",
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
@@ -81,13 +85,20 @@ class VoiceAgent:
         
     async def send_audio(self):
         while self.is_running:
-            if not self.is_speaking:
-                audio_data = self.input_stream.read(CHUNK, exception_on_overflow=False)
-                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                message = {"type": "input_audio_buffer.append", "audio": audio_base64}
-                await self.ws.send(json.dumps(message))
-            else:
-                self.input_stream.read(CHUNK, exception_on_overflow=False)
+            try:
+                if not self.is_speaking:
+                    audio_data = self.input_stream.read(CHUNK, exception_on_overflow=False)
+                    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                    message = {"type": "input_audio_buffer.append", "audio": audio_base64}
+                    await self.ws.send(json.dumps(message))
+                else:
+                    # Still read from microphone to prevent buffer overflow, but don't send
+                    self.input_stream.read(CHUNK, exception_on_overflow=False)
+            except Exception as e:
+                if "Input overflowed" in str(e):
+                    continue
+                else:
+                    print(f"⚠️ Audio send error: {e}")
             await asyncio.sleep(0.01)
             
     async def receive_messages(self):
@@ -98,9 +109,15 @@ class VoiceAgent:
     def continuous_playback(self):
         while self.is_running:
             with self.buffer_lock:
-                if len(self.output_buffer) > 0:
+                if len(self.output_buffer) > 0 and not self.interrupt_playback:
                     audio_data = self.output_buffer.popleft()
                     self.output_stream.write(audio_data)
+                elif self.interrupt_playback:
+                    # Clear the buffer when interrupted
+                    self.output_buffer.clear()
+                    self.interrupt_playback = False
+                    self.playback_stopped = True
+                    print("\n🔇 [Playback interrupted]", flush=True)
             asyncio.run(asyncio.sleep(0.001))
     
     async def handle_message(self, data: dict):
@@ -121,14 +138,21 @@ class VoiceAgent:
         
         elif msg_type == "response.created":
             self.is_speaking = True
+            self.playback_stopped = False
             
         elif msg_type == "response.done":
-            await asyncio.sleep(0.5)
             self.is_speaking = False
+            # Wait a bit for any remaining audio to finish
+            await asyncio.sleep(0.2)
             print("\n🎤 [Ready - speak now]\n", flush=True)
                 
         elif msg_type == "input_audio_buffer.speech_started":
             print("🎤 [Listening...]", flush=True)
+            # Interrupt any ongoing playback when user starts speaking
+            if self.is_speaking:
+                self.interrupt_playback = True
+                self.is_speaking = False
+                print("🔇 [Interrupting response]", flush=True)
             
         elif msg_type == "input_audio_buffer.speech_stopped":
             print("✓ [Processing...]\n", flush=True)
