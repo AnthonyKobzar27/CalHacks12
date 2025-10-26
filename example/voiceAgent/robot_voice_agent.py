@@ -327,10 +327,19 @@ class RobotVoiceAgent:
     async def send_audio(self):
         """Capture audio from microphone and send to API"""
         try:
+            chunk_count = 0
             while self.is_running:
                 try:
                     # Read audio from microphone with timeout handling
                     audio_data = self.input_stream.read(CHUNK, exception_on_overflow=False)
+                    
+                    # Check if audio has any significant volume (not just silence)
+                    audio_array = np.frombuffer(audio_data, dtype=np.int16)
+                    volume = np.sqrt(np.mean(audio_array**2))
+                    
+                    # Debug: Print when we detect audio input
+                    if volume > 100:  # Threshold for detecting speech
+                        print(f"🎤 MIC INPUT: Volume={volume:.0f}, Chunk={chunk_count}")
                     
                     # Resample if needed
                     if self.needs_resampling() and self.input_sample_rate != 24000:
@@ -346,6 +355,7 @@ class RobotVoiceAgent:
                     }
                     
                     await self.ws.send(json.dumps(message))
+                    chunk_count += 1
                     
                 except Exception as read_error:
                     if "Input overflowed" in str(read_error):
@@ -366,6 +376,7 @@ class RobotVoiceAgent:
     def start_playback(self):
         """Start continuous audio playback in a separate thread"""
         def playback_worker():
+            playback_count = 0
             while self.is_running:
                 try:
                     with self.buffer_lock:
@@ -377,6 +388,12 @@ class RobotVoiceAgent:
                                     audio_data = self.resample_audio(audio_data, 24000, self.output_sample_rate)
                                 
                                 self.output_stream.write(audio_data)
+                                playback_count += 1
+                                
+                                # Debug: Print when we play audio
+                                if playback_count % 10 == 0:  # Print every 10th chunk to avoid spam
+                                    print(f"🔊 SPEAKER OUTPUT: Playing chunk {playback_count}")
+                                    
                             except Exception as e:
                                 if "Output underflowed" in str(e):
                                     # This is normal, just continue
@@ -398,8 +415,14 @@ class RobotVoiceAgent:
     async def receive_audio(self):
         """Receive audio from API and add to playback buffer"""
         try:
+            message_count = 0
             async for message in self.ws:
                 data = json.loads(message)
+                message_count += 1
+                
+                # Debug: Print all message types we receive
+                msg_type = data.get("type", "unknown")
+                print(f"📡 WEBSOCKET: Received {msg_type} (message #{message_count})")
                 
                 if data.get("type") == "response.audio.delta":
                     # Decode base64 audio
@@ -409,10 +432,24 @@ class RobotVoiceAgent:
                     # Add to playback buffer
                     with self.buffer_lock:
                         self.output_buffer.append(audio_data)
+                    
+                    print(f"🎵 AUDIO RECEIVED: Added {len(audio_data)} bytes to playback buffer")
                 
                 elif data.get("type") == "response.done":
-                    print("Response complete")
+                    print("✅ Response complete")
                     break
+                    
+                elif data.get("type") == "session.created":
+                    print("✅ Session created successfully")
+                    
+                elif data.get("type") == "session.updated":
+                    print("✅ Session updated successfully")
+                    
+                elif data.get("type") == "input_audio_buffer.speech_started":
+                    print("🎤 SPEECH DETECTED: OpenAI detected speech start")
+                    
+                elif data.get("type") == "input_audio_buffer.speech_stopped":
+                    print("🎤 SPEECH ENDED: OpenAI detected speech end")
                     
         except Exception as e:
             print(f"Error in receive_audio: {e}")
