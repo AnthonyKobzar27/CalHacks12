@@ -1,6 +1,7 @@
 import requests
 from typing import Dict, Any
 from datetime import datetime
+import time
 
 
 def get_current_time(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -26,6 +27,68 @@ def get_weather(args: Dict[str, Any]) -> Dict[str, Any]:
         "condition": weather_desc,
         "message": f"The weather in {location} is {weather_desc} with a temperature of {temp_f}°F"
     }
+
+
+def move_robot(args: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Move the robot in a specific direction for a specified duration
+    """
+    direction = args.get("direction", "forward").lower()
+    duration = args.get("duration", 1.0)  # Default 1 second
+    speed = args.get("speed", 0.5)  # Default moderate speed (0.0 to 1.0)
+    
+    # Validate inputs
+    if duration <= 0 or duration > 10:
+        return {
+            "error": "Duration must be between 0.1 and 10 seconds",
+            "message": f"Invalid duration: {duration} seconds"
+        }
+    
+    if speed < 0 or speed > 1:
+        return {
+            "error": "Speed must be between 0.0 and 1.0",
+            "message": f"Invalid speed: {speed}"
+        }
+    
+    valid_directions = ["forward", "backward", "left", "right", "turn_left", "turn_right"]
+    if direction not in valid_directions:
+        return {
+            "error": f"Invalid direction. Must be one of: {', '.join(valid_directions)}",
+            "message": f"Unknown direction: {direction}"
+        }
+    
+    # Simulate robot movement (replace with actual robot control code)
+    print(f"🤖 ROBOT MOVEMENT: Moving {direction} for {duration}s at speed {speed}")
+    
+    # Here you would integrate with your actual robot control system
+    # For now, we'll simulate the movement
+    try:
+        # Simulate movement time
+        time.sleep(min(duration, 0.1))  # Don't actually sleep for long periods
+        
+        # Calculate movement distance/angle based on direction and duration
+        if direction in ["forward", "backward"]:
+            distance = duration * speed * 0.5  # meters (rough estimate)
+            movement_type = "linear"
+        else:
+            angle = duration * speed * 30  # degrees (rough estimate)
+            distance = angle
+            movement_type = "rotational"
+        
+        return {
+            "direction": direction,
+            "duration": duration,
+            "speed": speed,
+            "distance": round(distance, 2),
+            "movement_type": movement_type,
+            "message": f"Robot moved {direction} for {duration} seconds at {speed*100:.0f}% speed"
+        }
+        
+    except Exception as e:
+        return {
+            "error": f"Movement failed: {str(e)}",
+            "message": f"Failed to move robot {direction}"
+        }
 
 
 def make_api_call(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -54,6 +117,7 @@ TOOLS_REGISTRY = {
     "get_current_time": get_current_time,
     "get_weather": get_weather,
     "make_api_call": make_api_call,
+    "move_robot": move_robot,
 }
 
 TOOLS_DEFINITIONS = [
@@ -108,6 +172,34 @@ TOOLS_DEFINITIONS = [
                 }
             },
             "required": ["url"]
+        }
+    },
+    {
+        "type": "function",
+        "name": "move_robot",
+        "description": "Move the robot in a specific direction for a specified duration",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "direction": {
+                    "type": "string",
+                    "enum": ["forward", "backward", "left", "right", "turn_left", "turn_right"],
+                    "description": "The direction to move the robot"
+                },
+                "duration": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 10.0,
+                    "description": "How long to move in seconds (0.1 to 10 seconds)"
+                },
+                "speed": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                    "description": "Movement speed as a percentage (0.0 = stopped, 1.0 = full speed)"
+                }
+            },
+            "required": ["direction"]
         }
     }
 ]

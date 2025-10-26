@@ -80,20 +80,68 @@ class VoiceAgent:
         )
         
     async def send_audio(self):
+        consecutive_errors = 0
+        max_consecutive_errors = 10
+        
         while self.is_running:
-            if not self.is_speaking:
-                audio_data = self.input_stream.read(CHUNK, exception_on_overflow=False)
-                audio_base64 = base64.b64encode(audio_data).decode('utf-8')
-                message = {"type": "input_audio_buffer.append", "audio": audio_base64}
-                await self.ws.send(json.dumps(message))
-            else:
-                self.input_stream.read(CHUNK, exception_on_overflow=False)
+            try:
+                if not self.is_speaking:
+                    audio_data = self.input_stream.read(CHUNK, exception_on_overflow=False)
+                    audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+                    message = {"type": "input_audio_buffer.append", "audio": audio_base64}
+                    await self.ws.send(json.dumps(message))
+                    consecutive_errors = 0  # Reset error counter on success
+                else:
+                    self.input_stream.read(CHUNK, exception_on_overflow=False)
+            except Exception as e:
+                consecutive_errors += 1
+                if "Input overflowed" in str(e):
+                    # This is normal, just continue
+                    consecutive_errors = 0
+                    continue
+                else:
+                    print(f"⚠️ Audio send error: {e}")
+                    if consecutive_errors >= max_consecutive_errors:
+                        print(f"❌ Too many consecutive audio send errors ({consecutive_errors}), stopping")
+                        self.is_running = False
+                        break
+                    await asyncio.sleep(0.1)
+                    continue
             await asyncio.sleep(0.01)
             
     async def receive_messages(self):
-        async for message in self.ws:
-            data = json.loads(message)
-            await self.handle_message(data)
+        consecutive_errors = 0
+        max_consecutive_errors = 5
+        
+        try:
+            async for message in self.ws:
+                try:
+                    data = json.loads(message)
+                    consecutive_errors = 0  # Reset error counter on success
+                    await self.handle_message(data)
+                except json.JSONDecodeError as json_error:
+                    consecutive_errors += 1
+                    print(f"⚠️ JSON decode error: {json_error}")
+                    if consecutive_errors >= max_consecutive_errors:
+                        print(f"❌ Too many consecutive JSON errors ({consecutive_errors}), stopping")
+                        break
+                    continue
+                except Exception as message_error:
+                    consecutive_errors += 1
+                    print(f"⚠️ Message processing error: {message_error}")
+                    if consecutive_errors >= max_consecutive_errors:
+                        print(f"❌ Too many consecutive message errors ({consecutive_errors}), stopping")
+                        break
+                    continue
+        except Exception as e:
+            print(f"❌ Critical error in receive_messages: {e}")
+            print("🔄 Attempting to reconnect...")
+            try:
+                await self.connect()
+                print("✅ Reconnection successful")
+            except Exception as reconnect_error:
+                print(f"❌ Reconnection failed: {reconnect_error}")
+                self.is_running = False
             
     def continuous_playback(self):
         while self.is_running:
@@ -146,20 +194,44 @@ class VoiceAgent:
             self.is_speaking = False
     
     async def execute_function(self, call_id: str, function_name: str, arguments: dict):
-        func = self.tools_registry[function_name]
-        result = func(arguments)
-        print(f"✅ [Result: {result.get('message', result)}]")
-        
-        response = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "function_call_output",
-                "call_id": call_id,
-                "output": json.dumps(result)
+
+        try:
+            # Check if function exists in registry
+            if function_name not in self.tools_registry:
+                error_msg = f"Function '{function_name}' not found in tools registry"
+                print(f"❌ [Function Error: {error_msg}]")
+                result = {"error": error_msg, "function_name": function_name}
+            else:
+                # Execute the function
+                func = TOOLS_REGISTRY[function_name]
+                print(f"🔧 [Executing: {function_name} with args: {arguments}]")
+                result = func(arguments)
+                print(f"✅ [Result: {result.get('message', result)}]")
+                
+        except Exception as e:
+            error_msg = f"Function execution failed: {str(e)}"
+            print(f"❌ [Function Error: {error_msg}]")
+            result = {
+                "error": error_msg,
+                "function_name": function_name,
+                "arguments": arguments,
+                "exception_type": type(e).__name__
             }
-        }
-        await self.ws.send(json.dumps(response))
-        await self.ws.send(json.dumps({"type": "response.create"}))
+        
+        # Always send response back to API, even on error
+        try:
+            response = {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "function_call_output",
+                    "call_id": call_id,
+                    "output": json.dumps(result)
+                }
+            }
+            await self.ws.send(json.dumps(response))
+            await self.ws.send(json.dumps({"type": "response.create"}))
+        except Exception as e:
+            print(f"❌ [Response Error: Failed to send function result back to API: {str(e)}]")
             
     async def run(self):
         await self.connect()
