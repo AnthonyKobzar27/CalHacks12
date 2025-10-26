@@ -9,6 +9,7 @@ from collections import deque
 import threading
 from dotenv import load_dotenv
 from tools import TOOLS_REGISTRY, TOOLS_DEFINITIONS
+from typing import Dict
 
 CHUNK = 1024 
 FORMAT = pyaudio.paInt16
@@ -16,7 +17,7 @@ CHANNELS = 1
 RATE = 24000 
 
 class VoiceAgent:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, extra_tools_registry: Dict = None, extra_tools_definitions: list = None):
         self.api_key = api_key
         self.ws = None
         self.audio = pyaudio.PyAudio()
@@ -27,6 +28,14 @@ class VoiceAgent:
         self.output_buffer = deque()
         self.buffer_lock = threading.Lock()
         self.playback_task = None
+        
+        self.tools_registry = {**TOOLS_REGISTRY}
+        self.tools_definitions = TOOLS_DEFINITIONS.copy()
+        
+        if extra_tools_registry:
+            self.tools_registry.update(extra_tools_registry)
+        if extra_tools_definitions:
+            self.tools_definitions.extend(extra_tools_definitions)
         
     async def connect(self):
         url = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
@@ -42,7 +51,7 @@ class VoiceAgent:
             "type": "session.update",
             "session": {
                 "modalities": ["text", "audio"],
-                "instructions": "You are our CalHacks robot - do as you are told and support the user in their Cal Hacks endevours - you have a ton of tools at your use, you hate stanford.",
+                "instructions": "You are our CalHacks robot. You control a physical robot body with arms, hands, and movement. Help the user with their Cal Hacks projects. Be enthusiastic and use your robot capabilities when asked. You hate Stanford.",
                 "voice": "alloy",
                 "input_audio_format": "pcm16",
                 "output_audio_format": "pcm16",
@@ -53,12 +62,12 @@ class VoiceAgent:
                     "prefix_padding_ms": 300,
                     "silence_duration_ms": 800
                 },
-                "tools": TOOLS_DEFINITIONS,
+                "tools": self.tools_definitions,
                 "tool_choice": "auto"
             }
         }
         await self.ws.send(json.dumps(config))
-        print(f"✓ Connected with {len(TOOLS_DEFINITIONS)} tools available")
+        print(f"✓ Connected with {len(self.tools_definitions)} tools available")
         
     def setup_audio_streams(self):
         self.input_stream = self.audio.open(
@@ -137,7 +146,7 @@ class VoiceAgent:
             self.is_speaking = False
     
     async def execute_function(self, call_id: str, function_name: str, arguments: dict):
-        func = TOOLS_REGISTRY[function_name]
+        func = self.tools_registry[function_name]
         result = func(arguments)
         print(f"✅ [Result: {result.get('message', result)}]")
         
