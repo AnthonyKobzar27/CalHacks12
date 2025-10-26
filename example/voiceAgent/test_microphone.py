@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Microphone test script to verify input is working
-Shows real-time audio levels in terminal
+Test Microphone Script using PulseAudio
+Records audio from device 33 (PulseAudio) and plays it back through speakers
 """
 
 import pyaudio
@@ -9,237 +9,313 @@ import numpy as np
 import time
 import sys
 import signal
-import threading
+import wave
+import os
 
 # Audio parameters
 CHUNK = 1024
 FORMAT = pyaudio.paInt16
 CHANNELS = 1  # Mono
 RATE = 44100
-DURATION = 30  # seconds (or until Ctrl+C)
+RECORD_DURATION = 3  # seconds
+DEVICE_INDEX = 33  # PulseAudio device
 
-class MicrophoneTest:
-    def __init__(self):
-        self.audio = pyaudio.PyAudio()
-        self.stream = None
-        self.is_running = False
-        self.volume_history = []
-        
-    def signal_handler(self, sig, frame):
-        print('\n⚠️  Microphone test interrupted by user (Ctrl+C)')
-        self.is_running = False
-        sys.exit(0)
+def signal_handler(sig, frame):
+    print('\n⚠️  Test interrupted by user (Ctrl+C)')
+    sys.exit(0)
+
+def list_audio_devices():
+    """List all available audio devices"""
+    print("📋 Available Audio Devices:")
+    print("=" * 50)
     
-    def list_input_devices(self):
-        """List all available input devices"""
-        print("🎤 Available input devices:")
-        print("=" * 50)
-        
-        input_devices = []
-        for i in range(self.audio.get_device_count()):
-            info = self.audio.get_device_info_by_index(i)
+    audio = pyaudio.PyAudio()
+    
+    try:
+        for i in range(audio.get_device_count()):
+            info = audio.get_device_info_by_index(i)
+            device_type = []
+            
             if info['maxInputChannels'] > 0:
-                input_devices.append((i, info))
-                print(f"  Device {i}: {info['name']}")
-                print(f"    Channels: {info['maxInputChannels']}")
-                print(f"    Default Rate: {info['defaultSampleRate']}")
-                print()
-        
-        return input_devices
-    
-    def test_device(self, device_index):
-        """Test a specific input device"""
-        try:
-            device_info = self.audio.get_device_info_by_index(device_index)
-            print(f"🎤 Testing device {device_index}: {device_info['name']}")
-            print(f"   Max Input Channels: {device_info['maxInputChannels']}")
-            print(f"   Default Sample Rate: {device_info['defaultSampleRate']}")
+                device_type.append("INPUT")
+            if info['maxOutputChannels'] > 0:
+                device_type.append("OUTPUT")
             
-            # Use device's max channels (but cap at 1 for simplicity)
-            channels = min(1, device_info['maxInputChannels'])
+            device_type_str = "/".join(device_type) if device_type else "N/A"
             
-            # Try different sample rates
-            for rate in [44100, 48000, 24000, 16000]:
-                try:
-                    stream = self.audio.open(
-                        format=FORMAT,
-                        channels=channels,
-                        rate=rate,
-                        input=True,
-                        input_device_index=device_index,
-                        frames_per_buffer=CHUNK
-                    )
-                    stream.close()
-                    print(f"   ✅ Works at {rate}Hz")
-                    return rate
-                except Exception as e:
-                    print(f"   ❌ Failed at {rate}Hz: {e}")
-                    continue
-            
-            return None
-            
-        except Exception as e:
-            print(f"❌ Error testing device {device_index}: {e}")
-            return None
-    
-    def start_monitoring(self, device_index=None, sample_rate=44100):
-        """Start real-time audio monitoring"""
-        print(f"\n🎤 Starting microphone monitoring...")
-        print(f"   Device: {device_index if device_index is not None else 'Default'}")
-        print(f"   Sample Rate: {sample_rate}Hz")
-        print(f"   Duration: {DURATION} seconds (or Ctrl+C to stop)")
-        print("\n📊 Audio Level Monitor:")
-        print("   Level: ████████████████████ (0-100)")
-        print("   Speak into the microphone to see levels change!")
-        print("   " + "="*50)
-        
-        try:
-            # Open audio stream
-            self.stream = self.audio.open(
-                format=FORMAT,
-                channels=CHANNELS,
-                rate=sample_rate,
-                input=True,
-                input_device_index=device_index,
-                frames_per_buffer=CHUNK
-            )
-            
-            self.is_running = True
-            start_time = time.time()
-            
-            while self.is_running:
-                try:
-                    # Read audio data
-                    data = self.stream.read(CHUNK, exception_on_overflow=False)
-                    
-                    # Convert to numpy array
-                    audio_data = np.frombuffer(data, dtype=np.int16)
-                    
-                    # Calculate volume (RMS)
-                    volume = np.sqrt(np.mean(audio_data**2))
-                    
-                    # Normalize to 0-100 scale
-                    normalized_volume = min(100, (volume / 32767) * 100)
-                    
-                    # Add to history for smoothing
-                    self.volume_history.append(normalized_volume)
-                    if len(self.volume_history) > 10:
-                        self.volume_history.pop(0)
-                    
-                    # Calculate smoothed volume
-                    smoothed_volume = np.mean(self.volume_history)
-                    
-                    # Create visual bar
-                    bar_length = int(smoothed_volume / 5)  # 20 chars max
-                    bar = "█" * bar_length + "░" * (20 - bar_length)
-                    
-                    # Show level
-                    print(f"\r   Level: {bar} ({smoothed_volume:5.1f})", end="", flush=True)
-                    
-                    # Check for timeout
-                    if time.time() - start_time > DURATION:
-                        break
-                        
-                except Exception as e:
-                    if "Input overflowed" in str(e):
-                        continue
-                    else:
-                        print(f"\n❌ Error reading audio: {e}")
-                        break
-            
-            print(f"\n\n✅ Monitoring completed!")
-            
-        except Exception as e:
-            print(f"\n❌ Error starting monitoring: {e}")
-        
-        finally:
-            self.cleanup()
-    
-    def cleanup(self):
-        """Clean up resources"""
-        self.is_running = False
-        
-        if self.stream:
-            self.stream.stop_stream()
-            self.stream.close()
-        
-        self.audio.terminate()
-        print("🧹 Cleaned up audio resources")
-    
-    def run_interactive_test(self):
-        """Run interactive microphone test"""
-        print("🎤 Microphone Test Script")
-        print("=" * 50)
-        
-        # Set up signal handler
-        signal.signal(signal.SIGINT, self.signal_handler)
-        
-        # List devices
-        input_devices = self.list_input_devices()
-        
-        if not input_devices:
-            print("❌ No input devices found!")
-            return
-        
-        # Test each device
-        print("🔍 Testing devices...")
-        working_devices = []
-        
-        for device_index, device_info in input_devices:
-            rate = self.test_device(device_index)
-            if rate:
-                working_devices.append((device_index, device_info, rate))
-        
-        if not working_devices:
-            print("❌ No working input devices found!")
-            return
-        
-        # Let user choose device
-        print(f"\n✅ Found {len(working_devices)} working device(s):")
-        for i, (device_index, device_info, rate) in enumerate(working_devices):
-            print(f"  {i+1}. Device {device_index}: {device_info['name']} ({rate}Hz)")
-        
-        if len(working_devices) == 1:
-            device_index, device_info, rate = working_devices[0]
-            print(f"\n🎤 Using the only working device: {device_info['name']}")
-        else:
-            try:
-                choice = input(f"\nChoose device (1-{len(working_devices)}): ")
-                choice_idx = int(choice) - 1
-                if 0 <= choice_idx < len(working_devices):
-                    device_index, device_info, rate = working_devices[choice_idx]
-                    print(f"🎤 Selected: {device_info['name']}")
-                else:
-                    print("❌ Invalid choice, using first device")
-                    device_index, device_info, rate = working_devices[0]
-            except (ValueError, KeyboardInterrupt):
-                print("❌ Invalid input, using first device")
-                device_index, device_info, rate = working_devices[0]
-        
-        # Start monitoring
-        self.start_monitoring(device_index, rate)
+            print(f"  Device {i}: {info['name']}")
+            print(f"    Type: {device_type_str}")
+            print(f"    Channels: In={info['maxInputChannels']}, Out={info['maxOutputChannels']}")
+            print(f"    Sample Rate: {info['defaultSampleRate']:.0f}Hz")
+            print(f"    Latency: {info['defaultLowInputLatency']:.3f}s / {info['defaultLowOutputLatency']:.3f}s")
+            print()
+    finally:
+        audio.terminate()
 
-def main():
-    if len(sys.argv) > 1:
-        # Test specific device
-        try:
-            device_index = int(sys.argv[1])
-            test = MicrophoneTest()
-            test.signal_handler = lambda sig, frame: test.signal_handler(sig, frame)
-            signal.signal(signal.SIGINT, test.signal_handler)
+def test_device_info(device_index):
+    """Test and display information about a specific device"""
+    print(f"🔍 Testing Device {device_index}")
+    print("=" * 30)
+    
+    audio = pyaudio.PyAudio()
+    
+    try:
+        device_info = audio.get_device_info_by_index(device_index)
+        print(f"📱 Device Name: {device_info['name']}")
+        print(f"   Max Input Channels: {device_info['maxInputChannels']}")
+        print(f"   Max Output Channels: {device_info['maxOutputChannels']}")
+        print(f"   Default Sample Rate: {device_info['defaultSampleRate']:.0f}Hz")
+        print(f"   Default Low Input Latency: {device_info['defaultLowInputLatency']:.3f}s")
+        print(f"   Default Low Output Latency: {device_info['defaultLowOutputLatency']:.3f}s")
+        print(f"   Default High Input Latency: {device_info['defaultHighInputLatency']:.3f}s")
+        print(f"   Default High Output Latency: {device_info['defaultHighOutputLatency']:.3f}s")
+        
+        # Check if device supports input
+        if device_info['maxInputChannels'] == 0:
+            print("❌ This device does not support input (microphone)")
+            return False
+        else:
+            print("✅ This device supports input (microphone)")
             
-            print(f"🎤 Testing device {device_index}")
-            rate = test.test_device(device_index)
-            if rate:
-                test.start_monitoring(device_index, rate)
-            else:
-                print("❌ Device test failed")
-        except ValueError:
-            print("❌ Invalid device index. Use: python test_microphone.py [device_index]")
-    else:
-        # Interactive test
-        test = MicrophoneTest()
-        test.run_interactive_test()
+        # Check if device supports output
+        if device_info['maxOutputChannels'] == 0:
+            print("❌ This device does not support output (speakers)")
+            return False
+        else:
+            print("✅ This device supports output (speakers)")
+            
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error getting device info: {e}")
+        return False
+    finally:
+        audio.terminate()
+
+def record_audio(device_index, duration=RECORD_DURATION):
+    """Record audio from the specified device"""
+    print(f"🎤 Recording audio for {duration} seconds...")
+    print("   Speak into the microphone now!")
+    print("   Press Ctrl+C to stop early")
+    
+    audio = pyaudio.PyAudio()
+    frames = []
+    
+    try:
+        # Open input stream
+        input_stream = audio.open(
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RATE,
+            input=True,
+            input_device_index=device_index,
+            frames_per_buffer=CHUNK
+        )
+        
+        print("✅ Input stream opened successfully!")
+        print("🔴 Recording...")
+        
+        # Record audio
+        for i in range(0, int(RATE / CHUNK * duration)):
+            try:
+                data = input_stream.read(CHUNK, exception_on_overflow=False)
+                frames.append(data)
+                
+                # Show progress
+                progress = (i / (RATE / CHUNK * duration)) * 100
+                print(f"\r🎤 Recording... {progress:.1f}%", end="", flush=True)
+                
+            except Exception as e:
+                if "Input overflowed" in str(e):
+                    # This is normal, just continue
+                    continue
+                else:
+                    print(f"\n❌ Recording error: {e}")
+                    break
+        
+        print(f"\n✅ Recording completed! Captured {len(frames)} chunks")
+        
+    except Exception as e:
+        print(f"❌ Error opening input stream: {e}")
+        return None
+    finally:
+        if 'input_stream' in locals():
+            input_stream.stop_stream()
+            input_stream.close()
+        audio.terminate()
+    
+    return b''.join(frames)
+
+def play_audio(device_index, audio_data):
+    """Play audio through the specified device"""
+    print(f"🔊 Playing back recorded audio...")
+    
+    audio = pyaudio.PyAudio()
+    
+    try:
+        # Open output stream
+        output_stream = audio.open(
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RATE,
+            output=True,
+            output_device_index=device_index,
+            frames_per_buffer=CHUNK
+        )
+        
+        print("✅ Output stream opened successfully!")
+        print("🔊 Playing back...")
+        
+        # Play audio in chunks
+        total_chunks = len(audio_data) // (CHUNK * 2)  # 2 bytes per sample (16-bit)
+        
+        for i in range(0, len(audio_data), CHUNK * 2):
+            chunk = audio_data[i:i + CHUNK * 2]
+            if len(chunk) > 0:
+                output_stream.write(chunk)
+                
+                # Show progress
+                progress = (i / len(audio_data)) * 100
+                print(f"\r🔊 Playing... {progress:.1f}%", end="", flush=True)
+        
+        print(f"\n✅ Playback completed!")
+        
+    except Exception as e:
+        print(f"❌ Error playing audio: {e}")
+    finally:
+        if 'output_stream' in locals():
+            output_stream.stop_stream()
+            output_stream.close()
+        audio.terminate()
+
+def save_audio_to_file(audio_data, filename="test_recording.wav"):
+    """Save recorded audio to a WAV file"""
+    print(f"💾 Saving audio to {filename}...")
+    
+    try:
+        with wave.open(filename, 'wb') as wf:
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(2)  # 2 bytes per sample (16-bit)
+            wf.setframerate(RATE)
+            wf.writeframes(audio_data)
+        
+        print(f"✅ Audio saved to {filename}")
+        return True
+    except Exception as e:
+        print(f"❌ Error saving audio: {e}")
+        return False
+
+def load_audio_from_file(filename="test_recording.wav"):
+    """Load audio from a WAV file"""
+    print(f"📂 Loading audio from {filename}...")
+    
+    try:
+        with wave.open(filename, 'rb') as wf:
+            frames = wf.readframes(wf.getnframes())
+            print(f"✅ Audio loaded from {filename}")
+            return frames
+    except Exception as e:
+        print(f"❌ Error loading audio: {e}")
+        return None
+
+def test_microphone_playback(device_index=DEVICE_INDEX):
+    """Main test function: record and play back audio"""
+    print("🎤 Microphone Test Script")
+    print("=" * 50)
+    print(f"Using PulseAudio device {device_index}")
+    print()
+    
+    # Set up signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Test device info first
+    if not test_device_info(device_index):
+        print("❌ Device test failed. Cannot proceed.")
+        return False
+    
+    print()
+    
+    # Record audio
+    audio_data = record_audio(device_index, RECORD_DURATION)
+    if audio_data is None:
+        print("❌ Recording failed. Cannot proceed.")
+        return False
+    
+    print()
+    
+    # Save to file
+    save_audio_to_file(audio_data)
+    
+    print()
+    
+    # Play back the recorded audio
+    play_audio(device_index, audio_data)
+    
+    print()
+    print("🎉 Test completed successfully!")
+    print("   You should have heard your recorded voice played back.")
+    
+    return True
+
+def test_with_file_playback(device_index=DEVICE_INDEX, filename="test_recording.wav"):
+    """Test playing back a previously recorded file"""
+    print("📂 File Playback Test")
+    print("=" * 30)
+    
+    if not os.path.exists(filename):
+        print(f"❌ File {filename} not found. Please record audio first.")
+        return False
+    
+    # Load audio from file
+    audio_data = load_audio_from_file(filename)
+    if audio_data is None:
+        return False
+    
+    print()
+    
+    # Play back the audio
+    play_audio(device_index, audio_data)
+    
+    print()
+    print("🎉 File playback test completed!")
+    
+    return True
 
 if __name__ == "__main__":
-    main()
+    print("🎤 PulseAudio Microphone Test")
+    print("=" * 50)
+    
+    if len(sys.argv) > 1:
+        command = sys.argv[1].lower()
+        
+        if command == "list":
+            list_audio_devices()
+        elif command == "info":
+            if len(sys.argv) > 2:
+                device_index = int(sys.argv[2])
+                test_device_info(device_index)
+            else:
+                test_device_info(DEVICE_INDEX)
+        elif command == "play":
+            if len(sys.argv) > 2:
+                filename = sys.argv[2]
+                test_with_file_playback(DEVICE_INDEX, filename)
+            else:
+                test_with_file_playback(DEVICE_INDEX)
+        elif command == "record":
+            if len(sys.argv) > 2:
+                device_index = int(sys.argv[2])
+                test_microphone_playback(device_index)
+            else:
+                test_microphone_playback(DEVICE_INDEX)
+        else:
+            print("❌ Unknown command. Available commands:")
+            print("  python test_microphone.py list          - List all audio devices")
+            print("  python test_microphone.py info [device] - Show device info")
+            print("  python test_microphone.py record [device] - Record and play back")
+            print("  python test_microphone.py play [file]   - Play back a file")
+    else:
+        # Default: run the full test
+        test_microphone_playback(DEVICE_INDEX)
+    
+    print("\n🎉 Test finished!")
