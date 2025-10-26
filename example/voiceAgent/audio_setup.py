@@ -110,20 +110,108 @@ def test_audio_output():
     
     p.terminate()
 
+def test_audio_input():
+    """Test audio input from different devices"""
+    print("=== Audio Input Test ===")
+    
+    p = pyaudio.PyAudio()
+    
+    # Find input devices
+    input_devices = []
+    for i in range(p.get_device_count()):
+        info = p.get_device_info_by_index(i)
+        if info['maxInputChannels'] > 0:
+            input_devices.append((i, info['name']))
+    
+    print(f"Found {len(input_devices)} input devices:")
+    for device_id, name in input_devices:
+        print(f"  {device_id}: {name}")
+    
+    # Test each input device
+    for device_id, name in input_devices:
+        print(f"\nTesting input device {device_id}: {name}")
+        try:
+            # Try to open this device for input
+            stream = p.open(
+                format=pyaudio.paInt16,
+                channels=1,
+                rate=44100,
+                input=True,
+                input_device_index=device_id,
+                frames_per_buffer=1024
+            )
+            
+            print(f"  ✓ Successfully opened input device {device_id}")
+            stream.close()
+            
+        except Exception as e:
+            print(f"  ✗ Failed to open input device {device_id}: {e}")
+    
+    p.terminate()
+
 def main():
     print("B1 Robot Audio Setup Detection")
     print("=" * 40)
     
-    detect_audio_devices()
-    detect_alsa_devices()
-    detect_pulseaudio()
-    test_audio_output()
+    # Create output file
+    output_file = "audio_devices_report.txt"
     
-    print("\n=== Recommendations ===")
-    print("1. Look for devices with 'robot', 'speaker', 'output' in the name")
-    print("2. Test each output device to see which produces sound")
-    print("3. Note the device index for the robot's speakers")
-    print("4. Use that device index in your voice agent")
+    with open(output_file, 'w') as f:
+        # Redirect print to both console and file
+        import sys
+        from contextlib import redirect_stdout
+        
+        class Tee:
+            def __init__(self, *files):
+                self.files = files
+            def write(self, obj):
+                for f in self.files:
+                    f.write(obj)
+                    f.flush()
+            def flush(self):
+                for f in self.files:
+                    f.flush()
+        
+        original_stdout = sys.stdout
+        sys.stdout = Tee(sys.stdout, f)
+        
+        try:
+            print("B1 Robot Audio Setup Detection")
+            print("=" * 40)
+            print()
+            
+            # Audio device detection
+            detect_audio_devices()
+            print()
+            
+            # ALSA detection
+            detect_alsa_devices()
+            print()
+            
+            # PulseAudio detection
+            detect_pulseaudio()
+            print()
+            
+            # Test audio output
+            test_audio_output()
+            print()
+            
+            # Test audio input
+            test_audio_input()
+            print()
+            
+            print("=== Recommendations ===")
+            print("1. Look for devices with 'robot', 'speaker', 'output' in the name")
+            print("2. Test each output device to see which produces sound")
+            print("3. Note the device index for the robot's speakers")
+            print("4. Note the device index for the robot's microphone")
+            print("5. Use those device indices in your voice agent")
+            
+        finally:
+            sys.stdout = original_stdout
+    
+    print(f"\nAudio detection complete! Report saved to: {output_file}")
+    print("Please copy the contents of this file and share it.")
 
 if __name__ == "__main__":
     main()
