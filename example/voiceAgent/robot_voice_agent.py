@@ -13,6 +13,8 @@ from websockets.asyncio.client import connect
 from collections import deque
 import threading
 from dotenv import load_dotenv
+import numpy as np
+from scipy import signal
 
 # Audio configuration
 CHUNK = 1024  # 1024 frames per buffer
@@ -40,6 +42,10 @@ class RobotVoiceAgent:
         # Audio configuration based on robot's capabilities
         self.input_sample_rate = 24000  # OpenAI requirement
         self.output_sample_rate = 24000  # OpenAI requirement
+        
+        # Sample rate conversion buffers
+        self.input_resample_buffer = deque()
+        self.output_resample_buffer = deque()
         
     def list_audio_devices(self):
         """List all available audio devices"""
@@ -93,13 +99,53 @@ class RobotVoiceAgent:
         await self.ws.send(json.dumps(config))
         print("Session configured")
         
+    def get_device_supported_rates(self, device_index: int, is_input: bool = True):
+        """Get supported sample rates for a device"""
+        device_info = self.audio.get_device_info_by_index(device_index)
+        default_rate = int(device_info['defaultSampleRate'])
+        
+        # Common sample rates to test
+        test_rates = [8000, 16000, 22050, 24000, 44100, 48000]
+        
+        # Always include the device's default rate
+        if default_rate not in test_rates:
+            test_rates.append(default_rate)
+        
+        supported_rates = []
+        for rate in test_rates:
+            try:
+                kwargs = {
+                    'format': FORMAT,
+                    'channels': CHANNELS,
+                    'rate': rate,
+                    'frames_per_buffer': CHUNK
+                }
+                
+                if is_input:
+                    kwargs['input'] = True
+                    kwargs['input_device_index'] = device_index
+                else:
+                    kwargs['output'] = True
+                    kwargs['output_device_index'] = device_index
+                
+                test_stream = self.audio.open(**kwargs)
+                test_stream.close()
+                supported_rates.append(rate)
+            except:
+                continue
+        
+        return supported_rates, default_rate
+
     def test_audio_device(self, device_index: int, is_input: bool = True) -> bool:
         """Test if an audio device can be opened successfully"""
         try:
+            # First try the preferred rate
+            preferred_rate = self.input_sample_rate if is_input else self.output_sample_rate
+            
             kwargs = {
                 'format': FORMAT,
                 'channels': CHANNELS,
-                'rate': self.input_sample_rate if is_input else self.output_sample_rate,
+                'rate': preferred_rate,
                 'frames_per_buffer': CHUNK
             }
             
@@ -114,8 +160,31 @@ class RobotVoiceAgent:
             test_stream.close()
             return True
         except Exception as e:
-            print(f"Device {device_index} test failed: {e}")
-            return False
+            # If preferred rate fails, try device's default rate
+            try:
+                device_info = self.audio.get_device_info_by_index(device_index)
+                default_rate = int(device_info['defaultSampleRate'])
+                
+                kwargs = {
+                    'format': FORMAT,
+                    'channels': CHANNELS,
+                    'rate': default_rate,
+                    'frames_per_buffer': CHUNK
+                }
+                
+                if is_input:
+                    kwargs['input'] = True
+                    kwargs['input_device_index'] = device_index
+                else:
+                    kwargs['output'] = True
+                    kwargs['output_device_index'] = device_index
+                
+                test_stream = self.audio.open(**kwargs)
+                test_stream.close()
+                return True
+            except Exception as e2:
+                print(f"Device {device_index} test failed at {preferred_rate}Hz and {default_rate}Hz: {e2}")
+                return False
     
     def find_best_audio_devices(self):
         """Find the best working audio devices for the robot"""
@@ -124,11 +193,24 @@ class RobotVoiceAgent:
         # Test output devices (speakers)
         output_candidates = [0, 38, 33]  # USB Audio, default, pulse
         self.output_device_index = None
+        self.output_sample_rate = 24000  # Default
         
         for device_id in output_candidates:
-            if self.test_audio_device(device_id, is_input=False):
+            print(f"Testing output device {device_id}...")
+            supported_rates, default_rate = self.get_device_supported_rates(device_id, is_input=False)
+            print(f"  Supported rates: {supported_rates}")
+            print(f"  Default rate: {default_rate}")
+            
+            # Try to use 24kHz first, then fall back to device default
+            if 24000 in supported_rates:
+                self.output_sample_rate = 24000
                 self.output_device_index = device_id
-                print(f"✓ Selected output device {device_id}")
+                print(f"✓ Selected output device {device_id} at 24kHz")
+                break
+            elif default_rate in supported_rates:
+                self.output_sample_rate = default_rate
+                self.output_device_index = device_id
+                print(f"✓ Selected output device {device_id} at {default_rate}Hz")
                 break
         
         if self.output_device_index is None:
@@ -137,15 +219,54 @@ class RobotVoiceAgent:
         # Test input devices (microphone)
         input_candidates = [25, 27, 0]  # pulse, default, USB mic
         self.input_device_index = None
+        self.input_sample_rate = 24000  # Default
         
         for device_id in input_candidates:
-            if self.test_audio_device(device_id, is_input=True):
+            print(f"Testing input device {device_id}...")
+            supported_rates, default_rate = self.get_device_supported_rates(device_id, is_input=True)
+            print(f"  Supported rates: {supported_rates}")
+            print(f"  Default rate: {default_rate}")
+            
+            # Try to use 24kHz first, then fall back to device default
+            if 24000 in supported_rates:
+                self.input_sample_rate = 24000
                 self.input_device_index = device_id
-                print(f"✓ Selected input device {device_id}")
+                print(f"✓ Selected input device {device_id} at 24kHz")
+                break
+            elif default_rate in supported_rates:
+                self.input_sample_rate = default_rate
+                self.input_device_index = device_id
+                print(f"✓ Selected input device {device_id} at {default_rate}Hz")
                 break
         
         if self.input_device_index is None:
             raise Exception("No working audio input device found!")
+        
+        print(f"\nFinal configuration:")
+        print(f"  Output: Device {self.output_device_index} at {self.output_sample_rate}Hz")
+        print(f"  Input: Device {self.input_device_index} at {self.input_sample_rate}Hz")
+    
+    def resample_audio(self, audio_data, from_rate, to_rate):
+        """Resample audio data from one sample rate to another"""
+        if from_rate == to_rate:
+            return audio_data
+        
+        # Convert bytes to numpy array
+        audio_array = np.frombuffer(audio_data, dtype=np.int16)
+        
+        # Calculate resampling ratio
+        ratio = to_rate / from_rate
+        
+        # Resample using scipy
+        resampled = signal.resample(audio_array, int(len(audio_array) * ratio))
+        
+        # Convert back to int16 and bytes
+        resampled_int16 = resampled.astype(np.int16)
+        return resampled_int16.tobytes()
+    
+    def needs_resampling(self):
+        """Check if we need sample rate conversion"""
+        return (self.input_sample_rate != 24000 or self.output_sample_rate != 24000)
     
     def init_audio(self):
         """Initialize audio streams with robot's audio devices"""
@@ -207,6 +328,10 @@ class RobotVoiceAgent:
                 # Read audio from microphone
                 audio_data = self.input_stream.read(CHUNK, exception_on_overflow=False)
                 
+                # Resample if needed
+                if self.needs_resampling() and self.input_sample_rate != 24000:
+                    audio_data = self.resample_audio(audio_data, self.input_sample_rate, 24000)
+                
                 # Encode to base64
                 audio_b64 = base64.b64encode(audio_data).decode('utf-8')
                 
@@ -232,6 +357,10 @@ class RobotVoiceAgent:
                     if self.output_buffer:
                         audio_data = self.output_buffer.popleft()
                         try:
+                            # Resample if needed
+                            if self.needs_resampling() and self.output_sample_rate != 24000:
+                                audio_data = self.resample_audio(audio_data, 24000, self.output_sample_rate)
+                            
                             self.output_stream.write(audio_data)
                         except Exception as e:
                             print(f"Playback error: {e}")
