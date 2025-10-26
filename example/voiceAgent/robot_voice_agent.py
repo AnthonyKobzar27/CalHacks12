@@ -71,8 +71,12 @@ class RobotVoiceAgent:
         print("⏳ This may take a moment...")
         
         try:
-            self.ws = await connect(url, additional_headers=headers)
+            # Add timeout to prevent hanging
+            self.ws = await asyncio.wait_for(connect(url, additional_headers=headers), timeout=30.0)
             print("✅ Connected to OpenAI!")
+        except asyncio.TimeoutError:
+            print("❌ Connection timeout! Check your internet connection and API key.")
+            raise
         except Exception as e:
             print(f"❌ Connection failed: {e}")
             raise
@@ -154,9 +158,14 @@ class RobotVoiceAgent:
             # First try the preferred rate
             preferred_rate = self.input_sample_rate if is_input else self.output_sample_rate
             
+            # Get device info to check max channels
+            device_info = self.audio.get_device_info_by_index(device_index)
+            max_channels = device_info['maxInputChannels'] if is_input else device_info['maxOutputChannels']
+            test_channels = min(CHANNELS, max_channels)
+            
             kwargs = {
                 'format': FORMAT,
-                'channels': CHANNELS,
+                'channels': test_channels,
                 'rate': preferred_rate,
                 'frames_per_buffer': CHUNK
             }
@@ -179,7 +188,7 @@ class RobotVoiceAgent:
                 
                 kwargs = {
                     'format': FORMAT,
-                    'channels': CHANNELS,
+                    'channels': test_channels,  # Use the same channel count
                     'rate': default_rate,
                     'frames_per_buffer': CHUNK
                 }
@@ -513,7 +522,17 @@ class RobotVoiceAgent:
             self.audio.terminate()
         
         if self.ws:
-            asyncio.run(self.ws.close())
+            try:
+                # Use asyncio.create_task instead of asyncio.run
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If we're in a running loop, schedule the close
+                    asyncio.create_task(self.ws.close())
+                else:
+                    # If no loop is running, we can use run
+                    asyncio.run(self.ws.close())
+            except Exception as e:
+                print(f"Error closing WebSocket: {e}")
 
 def signal_handler(sig, frame):
     print('\n⚠️  Voice agent interrupted by user (Ctrl+C)')
