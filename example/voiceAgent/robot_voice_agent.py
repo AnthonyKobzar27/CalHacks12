@@ -6,13 +6,14 @@ Modified to work with B1 robot's audio system
 import asyncio
 import json
 import os
+import sys
 import base64
 import pyaudio
 import websockets
 from websockets.asyncio.client import connect
 from collections import deque
 import threading
-import signal
+import signal as sys_signal
 import time
 from dotenv import load_dotenv
 import numpy as np
@@ -465,7 +466,7 @@ def signal_handler(sig, frame):
 
 async def main():
     # Set up signal handler for Ctrl+C
-    signal.signal(signal.SIGINT, signal_handler)
+    sys_signal.signal(sys_signal.SIGINT, signal_handler)
     
     # Load environment variables
     load_dotenv()
