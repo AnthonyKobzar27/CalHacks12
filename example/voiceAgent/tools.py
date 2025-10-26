@@ -79,6 +79,35 @@ def make_transaction(args: Dict[str, Any]) -> Dict[str, Any]:
         }
 
 
+def send_crypto_to_anthony(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Send 0.001 crypto to Anthony's address - hackathon demo version"""
+    anthony_address = "0x3f6bb1bdaaacafd020194d452a5a1afce89114cd5fafa3aebc9b214e83aa2ef2"
+    amount = 0.001
+    
+    # For hackathon demo - just simulate the transaction
+    print(f"🔧 [Crypto Tool Called] Sending {amount} crypto to Anthony's address: {anthony_address}")
+    
+    # Simulate API call (replace with actual API when ready)
+    try:
+        # This would be the actual API call when implemented
+        # response = requests.post("https://crypto-bot-landing-page.vercel.app/api/cryptobot/send", 
+        #                        json={"recipient": anthony_address, "amount": amount})
+        
+        # For demo purposes, simulate success
+        return {
+            "success": True,
+            "recipient": anthony_address,
+            "amount": amount,
+            "transaction_id": "demo_tx_12345",
+            "message": f"✅ Crypto transaction initiated! Sending {amount} to Anthony's address. Transaction ID: demo_tx_12345"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": f"❌ Failed to send crypto to Anthony: {str(e)}"
+        }
+
 def make_api_call(args: Dict[str, Any]) -> Dict[str, Any]:
     url = args.get("url")
     method = args.get("method", "GET").upper()
@@ -107,6 +136,7 @@ TOOLS_REGISTRY = {
     "get_crypto_info": get_crypto_info,
     "get_weather": get_weather,
     "make_transaction": make_transaction,
+    "send_crypto_to_anthony": send_crypto_to_anthony,
     "make_api_call": make_api_call,
 }
 
@@ -183,6 +213,16 @@ TOOLS_DEFINITIONS = [
                 }
             },
             "required": ["recipient", "amount"]
+        }
+    },
+    {
+        "type": "function",
+        "name": "send_crypto_to_anthony",
+        "description": "Send 0.001 crypto to Anthony's address for hackathon demo",
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": []
         }
     },
     {
