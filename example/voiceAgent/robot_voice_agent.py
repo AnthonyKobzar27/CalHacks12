@@ -66,12 +66,21 @@ class RobotVoiceAgent:
             "OpenAI-Beta": "realtime=v1"
         }
         
-        print("Connecting to OpenAI Realtime API...")
-        self.ws = await connect(url, additional_headers=headers)
-        print("Connected!")
+        print("🌐 Connecting to OpenAI Realtime API...")
+        print(f"🔑 Using API key: {self.api_key[:10]}...")
+        print("⏳ This may take a moment...")
         
+        try:
+            self.ws = await connect(url, additional_headers=headers)
+            print("✅ Connected to OpenAI!")
+        except Exception as e:
+            print(f"❌ Connection failed: {e}")
+            raise
+        
+        print("📝 Configuring session...")
         # Configure the session
         await self.configure_session()
+        print("✅ Session configured!")
         
     async def configure_session(self):
         """Configure the OpenAI Realtime session"""
@@ -457,13 +466,21 @@ class RobotVoiceAgent:
     async def run(self):
         """Main run loop"""
         try:
+            print("🚀 Starting main run loop...")
             self.is_running = True
             
+            print("🎵 Initializing audio...")
             # Initialize audio
             self.init_audio()
+            print("✅ Audio initialized!")
             
+            print("🔊 Starting playback thread...")
             # Start playback thread
             self.start_playback()
+            print("✅ Playback thread started!")
+            
+            print("🎤 Starting audio capture and receive tasks...")
+            print("💬 Ready! Start speaking to the robot...")
             
             # Start audio tasks
             tasks = [
@@ -471,11 +488,12 @@ class RobotVoiceAgent:
                 asyncio.create_task(self.receive_audio())
             ]
             
+            print("⏳ Waiting for tasks to complete...")
             # Wait for tasks to complete
             await asyncio.gather(*tasks)
             
         except KeyboardInterrupt:
-            print("Stopping...")
+            print("⚠️ Stopping...")
         finally:
             self.cleanup()
     
