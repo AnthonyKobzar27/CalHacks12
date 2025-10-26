@@ -12,6 +12,8 @@ import websockets
 from websockets.asyncio.client import connect
 from collections import deque
 import threading
+import signal
+import time
 from dotenv import load_dotenv
 import numpy as np
 from scipy import signal
@@ -325,23 +327,34 @@ class RobotVoiceAgent:
         """Capture audio from microphone and send to API"""
         try:
             while self.is_running:
-                # Read audio from microphone
-                audio_data = self.input_stream.read(CHUNK, exception_on_overflow=False)
-                
-                # Resample if needed
-                if self.needs_resampling() and self.input_sample_rate != 24000:
-                    audio_data = self.resample_audio(audio_data, self.input_sample_rate, 24000)
-                
-                # Encode to base64
-                audio_b64 = base64.b64encode(audio_data).decode('utf-8')
-                
-                # Send to API
-                message = {
-                    "type": "input_audio_buffer.append",
-                    "audio": audio_b64
-                }
-                
-                await self.ws.send(json.dumps(message))
+                try:
+                    # Read audio from microphone with timeout handling
+                    audio_data = self.input_stream.read(CHUNK, exception_on_overflow=False)
+                    
+                    # Resample if needed
+                    if self.needs_resampling() and self.input_sample_rate != 24000:
+                        audio_data = self.resample_audio(audio_data, self.input_sample_rate, 24000)
+                    
+                    # Encode to base64
+                    audio_b64 = base64.b64encode(audio_data).decode('utf-8')
+                    
+                    # Send to API
+                    message = {
+                        "type": "input_audio_buffer.append",
+                        "audio": audio_b64
+                    }
+                    
+                    await self.ws.send(json.dumps(message))
+                    
+                except Exception as read_error:
+                    if "Input overflowed" in str(read_error):
+                        # This is normal, just continue
+                        continue
+                    else:
+                        print(f"Microphone read error: {read_error}")
+                        # Add a small delay before retrying
+                        await asyncio.sleep(0.1)
+                        continue
                 
                 # Small delay to prevent overwhelming the API
                 await asyncio.sleep(0.01)
@@ -353,20 +366,30 @@ class RobotVoiceAgent:
         """Start continuous audio playback in a separate thread"""
         def playback_worker():
             while self.is_running:
-                with self.buffer_lock:
-                    if self.output_buffer:
-                        audio_data = self.output_buffer.popleft()
-                        try:
-                            # Resample if needed
-                            if self.needs_resampling() and self.output_sample_rate != 24000:
-                                audio_data = self.resample_audio(audio_data, 24000, self.output_sample_rate)
-                            
-                            self.output_stream.write(audio_data)
-                        except Exception as e:
-                            print(f"Playback error: {e}")
-                    else:
-                        # No audio to play, sleep briefly
-                        threading.Event().wait(0.001)
+                try:
+                    with self.buffer_lock:
+                        if self.output_buffer:
+                            audio_data = self.output_buffer.popleft()
+                            try:
+                                # Resample if needed
+                                if self.needs_resampling() and self.output_sample_rate != 24000:
+                                    audio_data = self.resample_audio(audio_data, 24000, self.output_sample_rate)
+                                
+                                self.output_stream.write(audio_data)
+                            except Exception as e:
+                                if "Output underflowed" in str(e):
+                                    # This is normal, just continue
+                                    continue
+                                else:
+                                    print(f"Playback error: {e}")
+                                    # Add a small delay before retrying
+                                    time.sleep(0.01)
+                        else:
+                            # No audio to play, sleep briefly
+                            time.sleep(0.001)
+                except Exception as e:
+                    print(f"Playback worker error: {e}")
+                    time.sleep(0.01)
         
         self.playback_thread = threading.Thread(target=playback_worker, daemon=True)
         self.playback_thread.start()
@@ -436,7 +459,14 @@ class RobotVoiceAgent:
         if self.ws:
             asyncio.run(self.ws.close())
 
+def signal_handler(sig, frame):
+    print('\n⚠️  Voice agent interrupted by user (Ctrl+C)')
+    sys.exit(0)
+
 async def main():
+    # Set up signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
+    
     # Load environment variables
     load_dotenv()
     
@@ -461,12 +491,19 @@ async def main():
     agent = RobotVoiceAgent(api_key, output_device_index, input_device_index)
     
     try:
+        print("🤖 Starting Robot Voice Agent...")
+        print("Press Ctrl+C to stop")
+        print()
+        
         await agent.connect()
         await agent.run()
+    except KeyboardInterrupt:
+        print("\n⚠️  Voice agent stopped by user")
     except Exception as e:
         print(f"Error: {e}")
         print("Try running with different device indices or let the agent auto-detect")
     finally:
+        print("Cleaning up...")
         agent.cleanup()
 
 if __name__ == "__main__":

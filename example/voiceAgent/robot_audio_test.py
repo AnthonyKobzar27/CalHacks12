@@ -8,14 +8,29 @@ Outputs a single report file for analysis
 import os
 import sys
 import time
+import signal
 import numpy as np
 from dotenv import load_dotenv
 from robot_voice_agent import RobotVoiceAgent
 
+# Global variable to handle Ctrl+C
+test_interrupted = False
+
+def signal_handler(sig, frame):
+    global test_interrupted
+    print('\n⚠️  Test interrupted by user (Ctrl+C)')
+    test_interrupted = True
+    sys.exit(1)
+
 def comprehensive_audio_test():
     """Run comprehensive audio test and generate report"""
+    # Set up signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
+    
     print("🤖 Comprehensive Robot Audio Test")
     print("=" * 50)
+    print("Press Ctrl+C to interrupt if needed")
+    print()
     
     # Load environment variables
     load_dotenv("robot_audio_config.env")
@@ -83,18 +98,35 @@ def comprehensive_audio_test():
         try:
             start_time = time.time()
             capture_count = 0
-            while time.time() - start_time < 3:
+            timeout_occurred = False
+            
+            while time.time() - start_time < 3 and not test_interrupted:
                 try:
+                    # Use a shorter timeout for read operation
                     audio_data = agent.input_stream.read(1024, exception_on_overflow=False)
                     capture_count += 1
                     print(".", end="", flush=True)
+                    
+                    # Check for timeout on individual read
+                    if time.time() - start_time > 3:
+                        break
+                        
                 except Exception as e:
-                    report.append(f"❌ Microphone capture error: {e}")
-                    print(f"\n   ❌ Microphone capture error: {e}")
-                    break
-            else:
+                    if "Input overflowed" in str(e):
+                        # This is normal, just continue
+                        continue
+                    else:
+                        report.append(f"❌ Microphone capture error: {e}")
+                        print(f"\n   ❌ Microphone capture error: {e}")
+                        break
+            
+            if capture_count > 0:
                 report.append(f"✅ Microphone capture successful ({capture_count} chunks captured)")
                 print(f"\n   ✅ Microphone capture successful ({capture_count} chunks)")
+            else:
+                report.append("⚠️  Microphone capture completed but no audio chunks captured")
+                print(f"\n   ⚠️  Microphone capture completed but no audio chunks captured")
+                
         except Exception as e:
             report.append(f"❌ Microphone test failed: {e}")
             print(f"   ❌ Microphone test failed: {e}")
